@@ -36,22 +36,10 @@
 
 
 /* fake our package name */
-//typedef NSS*  Crypt__NSS;
 typedef CERTCertificate* Crypt__NSS__Certificate;
 
-// Make a scalar ref to a class object
-/* static SV* sv_make_ref(const char* class, void* object) {
-  SV* rv;
 
-  rv = newSV(0);
-  sv_setref_pv(rv, class, (void*) object);
-
-  if (! sv_isa(rv, class) ) {
-    croak("Error creating reference to %s", class);
-  }
-
-  return rv;
-} */
+//---- Beginning here this is a direct copy from NSS vfychain.c
 
 #define REVCONFIG_TEST_UNDEFINED      0
 #define REVCONFIG_TEST_LEAF           1
@@ -73,7 +61,6 @@ typedef struct RevMethodsStruct {
 } RevMethods;
 
 RevMethods revMethodsData[REV_METHOD_INDEX_MAX];
-
 
 SECStatus
 configureRevocationParams(CERTRevocationFlags *flags)
@@ -115,6 +102,8 @@ configureRevocationParams(CERTRevocationFlags *flags)
    return SECSuccess;
 }
 
+//---- end direct copy from vfychain.c
+
 SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
   char *cert;
@@ -145,25 +134,6 @@ PROTOTYPES: DISABLE
 
 BOOT:
 {
-  //HV *stash = gv_stashpvn("Crypt::OpenSSL::X509", 20, TRUE);
-
-  /* struct { char *n; I32 v; } Crypt__OpenSSL__X509__const[] = {
-
-  {"OPENSSL_VERSION_NUMBER", OPENSSL_VERSION_NUMBER},
-  {"FORMAT_UNDEF", FORMAT_UNDEF},
-  {"FORMAT_ASN1", FORMAT_ASN1},
-  {"FORMAT_TEXT", FORMAT_TEXT},
-  {"FORMAT_PEM", FORMAT_PEM},
-  {"FORMAT_NETSCAPE", FORMAT_NETSCAPE},
-  {"FORMAT_PKCS12", FORMAT_PKCS12},
-  {"FORMAT_SMIME", FORMAT_SMIME},
-  {"FORMAT_ENGINE", FORMAT_ENGINE},
-  {"FORMAT_IISSGC", FORMAT_IISSGC},
-  {"V_ASN1_PRINTABLESTRING",  V_ASN1_PRINTABLESTRING},
-  {"V_ASN1_UTF8STRING",  V_ASN1_UTF8STRING},
-  {"V_ASN1_IA5STRING",  V_ASN1_IA5STRING},
-  {Nullch,0}}; */
-  
   SECStatus            secStatus;
 
   PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
@@ -183,13 +153,13 @@ add_cert_to_db(cert)
   Crypt::NSS::Certificate cert;
 
   PREINIT:
-    PK11SlotInfo *slot = NULL;
-    CERTCertTrust *trust = NULL;
+  PK11SlotInfo *slot = NULL;
+  CERTCertTrust *trust = NULL;
   CERTCertDBHandle *defaultDB;
-    SECStatus rv;
+  SECStatus rv;
 
   CODE:
-    RETVAL = 0;
+  RETVAL = 0;
 
   defaultDB = CERT_GetDefaultCertDB();
 
@@ -199,24 +169,24 @@ add_cert_to_db(cert)
     croak("Could not create trust");
   }
 
-    rv = CERT_DecodeTrustString(trust, "c");
-    if (rv) {
-croak("unable to decode trust string");
-}
+  rv = CERT_DecodeTrustString(trust, "c");
+  if (rv) {
+    croak("unable to decode trust string");
+  }
 
-	rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, "test", PR_FALSE);
-	if (rv != SECSuccess) {
-croak("Could not add cert to db");
-}
+  rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, "test", PR_FALSE);
+  if (rv != SECSuccess) {
+    croak("Could not add cert to db");
+  }
 
-    rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
-    if (rv != SECSuccess) {
-croak("Could not change cert trust");
-}
+  rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
+  if (rv != SECSuccess) {
+    croak("Could not change cert trust");
+  }
 
-    PORT_Free(trust);
+  PORT_Free(trust);
 
-    RETVAL = newSViv(1);   
+  RETVAL = newSViv(1);   
   
 
   OUTPUT: 
