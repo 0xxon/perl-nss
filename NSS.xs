@@ -13,9 +13,9 @@
 
 #include "pk11func.h"
 #include "seccomon.h"
-// #include "secutil.h"
 #include "secmod.h"
 #include "secitem.h"
+#include "secder.h"
 #include "cert.h"
 #include "ocsp.h"
 
@@ -201,7 +201,9 @@ accessor(cert)
   ALIAS:
   subject = 1
   issuer = 2  
-  serial = 3
+  serial_raw = 3
+  notBefore = 5
+  notAfter = 6
   version = 8
 
   PREINIT:
@@ -214,8 +216,34 @@ accessor(cert)
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
     RETVAL = item_to_sv(&cert->serialNumber);
+  } else if ( ix == 5 || ix == 6 ) {
+    int64 time;
+    SECStatus rv;
+    char *timeString;
+    PRExplodedTime printableTime; 
+
+    if ( ix == 5 ) 
+    	rv = DER_UTCTimeToTime(&time, &cert->validity.notBefore);
+    else if ( ix == 6 )    
+	rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
+    else
+        croak("not possible");
+
+    if (rv != SECSuccess)
+      croak("Could not parse time");
+
+    PR_ExplodeTime(time, PR_GMTParameters, &printableTime);
+    timeString = PORT_Alloc(256);
+    if ( ! PR_FormatTime(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
+      croak("Could not format time string");
+    }
+
+    RETVAL = newSVpvf("%s", timeString);
+    PORT_Free(timeString);
   } else if ( ix == 8 ) {
-    RETVAL = item_to_sv(&cert->version);
+    // if version is not specified it it 1 (0).
+    int version = cert->version.len ? DER_GetInteger(&cert->version) : 0;
+    RETVAL = newSViv(version+1);
   } else {
     croak("Unknown accessor %d", ix);
   }
@@ -268,9 +296,9 @@ verify(cert)
   
 
   if (secStatus != SECSuccess ) {
-    RETVAL = newSViv(0);
+    RETVAL = &PL_sv_no;
   } else {
-    RETVAL = newSViv(1);
+    RETVAL = &PL_sv_yes;
   }  
 
   OUTPUT: 
