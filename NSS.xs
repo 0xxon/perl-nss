@@ -146,8 +146,12 @@ _init_nodb()
 
   PREINIT:
   SECStatus secStatus;
+  //PRUint32 initFlags;
   
   CODE:
+  //initFlags = NSS_INIT_NOCERTDB | NSS_INIT_NOMODDB | NSS_INIT_NOROOTINIT;
+  
+  //secStatus = NSS_Initialize("test2", "", "", SECMOD_DB, initFlags);
   secStatus = NSS_NoDB_Init(NULL);
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
@@ -219,10 +223,17 @@ add_cert_to_db(cert, string)
   PORT_Free(trust);
 
   RETVAL = newSViv(1);   
-  
 
   OUTPUT: 
   RETVAL
+
+
+void
+dump_certificate_cache_info()
+
+  CODE:
+  nss_DumpCertificateCacheInfo();
+  
 
 MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::CertList
 
@@ -374,6 +385,7 @@ verify(cert, trustedCertList = NO_INIT)
   static CERTRevocationFlags rev;
   static PRUint64 revFlagsLeaf[2];
   static PRUint64 revFlagsChain[2];
+  CERTVerifyLog log;
 
   CODE:
 
@@ -402,11 +414,18 @@ verify(cert, trustedCertList = NO_INIT)
 
   cvin[inParamIndex].type = cert_pi_end;
   
-  cvout[0].type = cert_po_trustAnchor;
+  // Initialize log
+  log.arena = PORT_NewArena(512);
+  log.head = log.tail = NULL;
+  log.count = 0;
+
+  /* cvout[0].type = cert_po_trustAnchor;
   cvout[0].value.pointer.cert = NULL;
   cvout[1].type = cert_po_certList;
   cvout[1].value.pointer.chain = NULL; 
-  cvout[2].type = cert_po_end;
+  cvout[2].type = cert_po_errorLog;
+  cvout[2].value.pointer.log = &log; */
+  cvout[0].type = cert_po_end;
 
   secStatus = CERT_PKIXVerifyCert(cert, certificateUsageSSLServer,
                                   cvin, cvout, NULL);
@@ -414,9 +433,23 @@ verify(cert, trustedCertList = NO_INIT)
 
   if (secStatus != SECSuccess ) {
     RETVAL = &PL_sv_no;
-  } else {
+  } else { 
+    /* CERTCertificate* issuerCert = cvout[0].value.pointer.cert;
+    CERTCertList* builtChain = cvout[1].value.pointer.chain;    
+
+    CERT_DestroyCertList(builtChain);
+    CERT_DestroyCertificate(issuerCert); */
+   
     RETVAL = &PL_sv_yes;
   }  
+    
+  // destroy refs in the log 
+  for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
+    if (node->cert)
+      CERT_DestroyCertificate(node->cert);
+  }
+
+  PORT_FreeArena(log.arena, PR_FALSE);
 
   OUTPUT: 
   RETVAL
@@ -466,6 +499,7 @@ void DESTROY(cert)
   PPCODE:
 
   if ( cert ) {
+    //printf("Certificate %s destroyed\n", cert->subjectName);
     CERT_DestroyCertificate(cert);
     cert = 0;
   }

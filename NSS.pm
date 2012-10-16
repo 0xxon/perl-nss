@@ -95,7 +95,6 @@ sub new_from_rootlist {
 				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
 				$pem = "";
 				$certlist->add($cert);
-				say $cert->issuer;
 			}
 		}
 	}
