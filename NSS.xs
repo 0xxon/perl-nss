@@ -343,6 +343,7 @@ old_verify(cert)
   PREINIT:
   SECStatus secStatus;
   PRTime time = 0;
+  CERTVerifyLog log;
   CERTCertDBHandle *defaultDB;
 
   CODE:
@@ -354,18 +355,53 @@ old_verify(cert)
   if ( ix == 1 ) 
     CERT_SetUsePKIXForValidation(PR_TRUE);
 
+  // Initialize log
+  log.arena = PORT_NewArena(512);
+  log.head = log.tail = NULL;
+  log.count = 0;
+
   secStatus = CERT_VerifyCertificate(defaultDB, cert,
                                      PR_TRUE, // check sig 
 				     certificateUsageSSLServer,
 				     time,
-				     0,
-				     0, NULL);
+				     NULL,
+				     &log, NULL);
+
 
   if (secStatus != SECSuccess ) {
     RETVAL = &PL_sv_no;
   } else {
     RETVAL = &PL_sv_yes;
   }  
+
+  for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
+    if (node->cert)
+      CERT_DestroyCertificate(node->cert);
+  }
+  
+  PORT_FreeArena(log.arena, PR_FALSE);
+
+  OUTPUT:
+  RETVAL
+
+SV* match_name(cert, string)
+  Crypt::NSS::Certificate cert;
+  SV* string;
+
+  PREINIT:
+  char* hostname;
+  SECStatus secStatus;
+
+  CODE:
+  hostname = SvPV_nolen(string);
+
+  secStatus = CERT_VerifyCertName(cert, hostname);
+
+  if ( secStatus != SECSuccess ) {
+    RETVAL = &PL_sv_no;
+  } else {
+    RETVAL = &PL_sv_yes;
+  }
 
   OUTPUT:
   RETVAL
