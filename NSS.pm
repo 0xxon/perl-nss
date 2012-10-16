@@ -43,6 +43,10 @@ sub load_rootlist {
 package Crypt::NSS::Certificate;
 use MIME::Base64 ();
 
+sub serial {
+	return unpack("H*", serial_raw(@_));
+}
+
 sub new_from_pem {
 	my ($class, $pem) = @_;
 
