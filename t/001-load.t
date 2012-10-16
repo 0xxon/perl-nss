@@ -6,7 +6,7 @@ use Test::More tests=>8;
 
 BEGIN { use_ok( 'Crypt::NSS' ); }
 
-my $pem = slurp("selfsigned.crt");
+my $pem = slurp("certs/selfsigned.crt");
 my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
 
 isa_ok($cert, 'Crypt::NSS::Certificate');
