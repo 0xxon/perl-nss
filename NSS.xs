@@ -134,10 +134,19 @@ PROTOTYPES: DISABLE
 
 BOOT:
 {
-  SECStatus            secStatus;
-
+  
   PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
+  //SECU_RegisterDynamicOids();
+}
+
+void
+_init_nodb()
+
+  PREINIT:
+  SECStatus secStatus;
+  
+  CODE:
   secStatus = NSS_NoDB_Init(NULL);
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
@@ -145,21 +154,41 @@ BOOT:
     croak("NSS init");
   }
 
-  //SECU_RegisterDynamicOids();
-}
+  
+void
+_init_db(string)
+  SV* string;
+
+  PREINIT:
+  SECStatus secStatus;
+  char* path;  
+
+  CODE:
+  path = SvPV_nolen(string);
+
+  secStatus = NSS_InitReadWrite(path);
+  //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
+
+  if (secStatus != SECSuccess) {
+    croak("NSS init");
+  }
+  
 
 SV*
-add_cert_to_db(cert)
+add_cert_to_db(cert, string)
   Crypt::NSS::Certificate cert;
+  SV* string;
 
   PREINIT:
   PK11SlotInfo *slot = NULL;
   CERTCertTrust *trust = NULL;
   CERTCertDBHandle *defaultDB;
   SECStatus rv;
+  char* nick;
 
   CODE:
   RETVAL = 0;
+  nick = SvPV_nolen(string);
 
   defaultDB = CERT_GetDefaultCertDB();
 
@@ -169,14 +198,16 @@ add_cert_to_db(cert)
     croak("Could not create trust");
   }
 
-  rv = CERT_DecodeTrustString(trust, "c");
+  rv = CERT_DecodeTrustString(trust, "C");
   if (rv) {
     croak("unable to decode trust string");
   }
 
-  rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, "test", PR_FALSE);
+  rv = PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, nick, PR_FALSE);
   if (rv != SECSuccess) {
-    croak("Could not add cert to db");
+    PRErrorCode err = PR_GetError();
+    croak( "could not add certificate to db %d = %s\n",
+	         err, PORT_ErrorToString(err));
   }
 
   rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
@@ -253,12 +284,47 @@ accessor(cert)
   RETVAL
 
 SV*
+old_verify(cert)
+  Crypt::NSS::Certificate cert;
+
+  ALIAS:
+  old_verify_pkix = 1
+
+  PREINIT:
+  SECStatus secStatus;
+  PRTime time = 0;
+  CERTCertDBHandle *defaultDB;
+
+  CODE:
+  defaultDB = CERT_GetDefaultCertDB();
+
+  if (!time)
+    time = PR_Now();
+
+  if ( ix == 1 ) 
+    CERT_SetUsePKIXForValidation(PR_TRUE);
+
+  secStatus = CERT_VerifyCertificate(defaultDB, cert,
+                                     PR_FALSE, // check sig 
+				     certificateUsageSSLServer,
+				     time,
+				     0,
+				     0, NULL);
+
+  if (secStatus != SECSuccess ) {
+    RETVAL = &PL_sv_no;
+  } else {
+    RETVAL = &PL_sv_yes;
+  }  
+
+  OUTPUT:
+  RETVAL
+
+SV*
 verify(cert)
   Crypt::NSS::Certificate cert;
 
   PREINIT:
-//  PRTime time = 0;
-//  CERTCertDBHandle *defaultDB;
   SECStatus secStatus;
   PRBool certFetching = PR_FALSE; // automatically get AIA certs
 
@@ -284,18 +350,27 @@ verify(cert)
     croak("Can not configure revocation parameters");
   }
 
+  cvin[inParamIndex].type = cert_pi_revocationFlags;
+  cvin[inParamIndex].value.pointer.revocation = &rev;
+  inParamIndex++;
+
+
   cvin[inParamIndex].type = cert_pi_end;
   
   cvout[0].type = cert_po_trustAnchor;
   cvout[0].value.pointer.cert = NULL;
   cvout[1].type = cert_po_certList;
-  cvout[1].value.pointer.chain = NULL;
+  cvout[1].value.pointer.chain = NULL; 
+  cvout[2].type = cert_po_end;
 
-  secStatus = CERT_PKIXVerifyCert(cert, certUsageSSLServer,
+  secStatus = CERT_PKIXVerifyCert(cert, certificateUsageSSLServer,
                                   cvin, cvout, NULL);
   
 
   if (secStatus != SECSuccess ) {
+    PRErrorCode err = PR_GetError();
+    croak( "could not add certificate to db %d = %s\n",
+	         err, PORT_ErrorToString(err));
     RETVAL = &PL_sv_no;
   } else {
     RETVAL = &PL_sv_yes;
