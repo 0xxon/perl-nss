@@ -37,6 +37,7 @@
 
 /* fake our package name */
 typedef CERTCertificate* Crypt__NSS__Certificate;
+typedef CERTCertList* Crypt__NSS__CertList;
 
 
 //---- Beginning here this is a direct copy from NSS vfychain.c
@@ -198,7 +199,7 @@ add_cert_to_db(cert, string)
     croak("Could not create trust");
   }
 
-  rv = CERT_DecodeTrustString(trust, "C");
+  rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
   if (rv) {
     croak("unable to decode trust string");
   }
@@ -222,6 +223,44 @@ add_cert_to_db(cert, string)
 
   OUTPUT: 
   RETVAL
+
+MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::CertList
+
+Crypt::NSS::CertList
+new(class)
+
+  PREINIT:
+  CERTCertList *certList;
+
+  CODE:
+  certList = CERT_NewCertList();
+
+  RETVAL = certList;
+
+  OUTPUT:
+  RETVAL
+
+void
+add(certlist, cert)
+  Crypt::NSS::CertList certlist;
+  Crypt::NSS::Certificate cert;
+
+  CODE:
+  CERTCertificate* addcert = CERT_DupCertificate(cert);
+  CERT_AddCertToListTail(certlist, addcert);
+
+
+void 
+DESTROY(certlist)
+  Crypt::NSS::CertList certlist;
+
+  PPCODE:
+
+  if ( certlist ) {
+    CERT_DestroyCertList(certlist); // memory leak - certificates in list are not actually deleted. 
+    certlist = 0;
+  }
+
 
 MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::Certificate
 
@@ -305,7 +344,7 @@ old_verify(cert)
     CERT_SetUsePKIXForValidation(PR_TRUE);
 
   secStatus = CERT_VerifyCertificate(defaultDB, cert,
-                                     PR_FALSE, // check sig 
+                                     PR_TRUE, // check sig 
 				     certificateUsageSSLServer,
 				     time,
 				     0,
@@ -321,8 +360,9 @@ old_verify(cert)
   RETVAL
 
 SV*
-verify(cert)
+verify(cert, trustedCertList = NO_INIT)
   Crypt::NSS::Certificate cert;
+  Crypt::NSS::CertList trustedCertList;
 
   PREINIT:
   SECStatus secStatus;
@@ -336,7 +376,6 @@ verify(cert)
   static PRUint64 revFlagsChain[2];
 
   CODE:
-
 
   cvin[inParamIndex].type = cert_pi_useAIACertFetch;
   cvin[inParamIndex].value.scalar.b = certFetching;
@@ -354,6 +393,12 @@ verify(cert)
   cvin[inParamIndex].value.pointer.revocation = &rev;
   inParamIndex++;
 
+  if ( items == 2 ) {
+    // we have a trustedCertList
+    cvin[inParamIndex].type = cert_pi_trustAnchors;
+    cvin[inParamIndex].value.pointer.chain = trustedCertList;
+    inParamIndex++;    
+  }
 
   cvin[inParamIndex].type = cert_pi_end;
   
@@ -368,9 +413,6 @@ verify(cert)
   
 
   if (secStatus != SECSuccess ) {
-    PRErrorCode err = PR_GetError();
-    croak( "could not add certificate to db %d = %s\n",
-	         err, PORT_ErrorToString(err));
     RETVAL = &PL_sv_no;
   } else {
     RETVAL = &PL_sv_yes;
@@ -417,4 +459,14 @@ new(class, string)
   OUTPUT:
   RETVAL
 
+
+void DESTROY(cert)
+  Crypt::NSS::Certificate cert;
+
+  PPCODE:
+
+  if ( cert ) {
+    CERT_DestroyCertificate(cert);
+    cert = 0;
+  }
 

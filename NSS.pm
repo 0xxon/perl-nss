@@ -39,7 +39,6 @@ sub load_rootlist {
 			if ( $line =~ /--END CERTIFICATE--/ ) {
 				#say "|$pem|";
 				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
-				say $cert->issuer;
 				$pem = "";
 				add_cert_to_db($cert, $cert->subject);
 			}
@@ -68,14 +67,42 @@ sub import {
         die ("We do not export symbols") unless (scalar @syms == 0);	
 
 	if ( scalar @dbpath == 0 ) {
-		say "Init_nodb";
 		_init_nodb();
 	} elsif (scalar @dbpath == 1) {
-		say "Init_db";
 		_init_db($dbpath[0]);
 	} else {
 		die("More than one database path specified");
 	}
+}
+
+package Crypt::NSS::CertList;
+
+sub new_from_rootlist {
+	my ($class, $filename) = @_;
+
+	my $certlist = Crypt::NSS::CertList->new();
+
+	my $pem;
+
+	open (my $fh, "<", $filename);
+	while ( my $line = <$fh> ) {
+		if ( $line =~ /--BEGIN CERTIFICATE--/ .. $line =~ /--END CERTIFICATE--/ ) {
+
+			$pem .= $line;
+
+			if ( $line =~ /--END CERTIFICATE--/ ) {
+				#say "|$pem|";
+				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
+				$pem = "";
+				$certlist->add($cert);
+				say $cert->issuer;
+			}
+		}
+	}
+
+	close($fh);
+
+	return $certlist;
 }
 
 package Crypt::NSS::Certificate;
@@ -99,9 +126,6 @@ sub new_from_pem {
 	return $class->new($der);
 }
 
-
-END {
-}
 
 1;
 
