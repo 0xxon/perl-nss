@@ -28,16 +28,54 @@ BOOT_XS: {
 sub load_rootlist {
 	my ($class, $filename) = @_;
 
-	my $cert;
+	my $pem;
 
 	open (my $fh, "<", $filename);
-	while ( my $line = <> ) {
-		if ( $line =~ /--BEGIN CERTIFICATE--/ .. /--END CERTIFICATE--/ ) {
-			print $line;
+	while ( my $line = <$fh> ) {
+		if ( $line =~ /--BEGIN CERTIFICATE--/ .. $line =~ /--END CERTIFICATE--/ ) {
+
+			$pem .= $line;
+
+			if ( $line =~ /--END CERTIFICATE--/ ) {
+				#say "|$pem|";
+				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
+				say $cert->issuer;
+				$pem = "";
+				add_cert_to_db($cert, $cert->subject);
+			}
 		}
 	}
 
 	close($fh);
+}
+
+sub import {
+	my $pkg = shift; # us
+        my @syms = (); # symbols to import. really should be empty
+        my @dbpath = (); 
+
+        my $dest = \@syms;
+
+        for (@_) {
+                if ( $_ eq ':dbpath') {
+                        # switch to dbpath 
+                        $dest = \@dbpath;
+                        next;           
+                }
+                push (@$dest, $_);
+        }
+        
+        die ("We do not export symbols") unless (scalar @syms == 0);	
+
+	if ( scalar @dbpath == 0 ) {
+		say "Init_nodb";
+		_init_nodb();
+	} elsif (scalar @dbpath == 1) {
+		say "Init_db";
+		_init_db($dbpath[0]);
+	} else {
+		die("More than one database path specified");
+	}
 }
 
 package Crypt::NSS::Certificate;
