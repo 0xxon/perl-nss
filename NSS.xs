@@ -286,6 +286,7 @@ accessor(cert)
   notBefore = 5
   notAfter = 6
   version = 8
+  subj_alt_name = 9
 
   PREINIT:
 
@@ -325,6 +326,63 @@ accessor(cert)
     // if version is not specified it it 1 (0).
     int version = cert->version.len ? DER_GetInteger(&cert->version) : 0;
     RETVAL = newSViv(version+1);
+  } else if ( ix == 9 ) {
+    SECStatus rv;
+    SECItem           subAltName;
+    CERTGeneralName * nameList;
+    CERTGeneralName * current;
+    PRArenaPool *     arena          = NULL;
+    SV* out = newSVpvn("", 0);
+    
+    rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, 
+      	&subAltName);
+
+    if (rv != SECSuccess) {
+    	printf("No alt name!\n");
+        RETVAL = &PL_sv_no;
+        return;
+    } 
+    
+    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    if ( !arena ) 
+      croak("Could not create arena");
+   
+    nameList = current = CERT_DecodeAltNameExtension(arena, &subAltName);
+    if(!current)
+      croak("No namelist");
+
+    do {
+	switch (current->type) {
+	case certDNSName:
+            {
+            sv_catpv(out, "DNS:");
+	    sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+            sv_catpv(out, ",");
+	    break;
+            }
+	case certIPAddress:
+	    sv_catpv(out, "IP:");
+	    sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+            sv_catpv(out, ",");
+	    break;
+	default:
+	    sv_catpv(out, "UnknownElement,");
+	    break;
+	}
+	current = CERT_GetNextGeneralName(current);
+    } while (current != nameList);
+    
+    RETVAL = out;
+
+    if (arena) {
+	PORT_FreeArena(arena, PR_FALSE);
+    }
+
+    if (subAltName.data) {
+	SECITEM_FreeItem(&subAltName, PR_FALSE);
+    }
+
+
   } else {
     croak("Unknown accessor %d", ix);
   }
