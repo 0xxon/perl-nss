@@ -6,10 +6,13 @@ use Test::More tests=>11;
 
 use File::Temp;
 
-# use a temporary directory for our database...
-my $dbdir = File::Temp->newdir();
 
-BEGIN { use_ok( 'Crypt::NSS', (':dbpath', $dbdir) ); }
+BEGIN { 
+	# use a temporary directory for our database...
+	my $dbdir = File::Temp->newdir();
+
+	use_ok( 'Crypt::NSS', (':dbpath', $dbdir) );
+}
 
 # load root certificates to db
 Crypt::NSS->load_rootlist('certs/root.ca');

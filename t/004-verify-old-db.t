@@ -4,12 +4,13 @@ use warnings;
 
 use Test::More tests=>11;
 
-use File::Temp;
 
-# use a temporary directory for our database...
-my $dbdir = File::Temp->newdir();
-
-BEGIN { use_ok( 'Crypt::NSS', (':dbpath', $dbdir) ); }
+BEGIN {
+ use File::Temp;
+ # use a temporary directory for our database...
+ my $dbdir = File::Temp->newdir();
+ use_ok( 'Crypt::NSS', (':dbpath', $dbdir) ); 
+}
 
 # load root certificates to db
 Crypt::NSS->load_rootlist('certs/root.ca');
@@ -19,8 +20,6 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 	isa_ok($selfsigned, 'Crypt::NSS::Certificate');
 	ok(!$selfsigned->old_verify, 'no verify');
 }
-
-die();
 
 # these tests need fixed timestamps added...
 # otherwise they will fail in a year or so.
