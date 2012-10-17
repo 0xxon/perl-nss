@@ -69,7 +69,7 @@ configureRevocationParams(CERTRevocationFlags *flags)
    int i;
    uint testType = REVCONFIG_TEST_UNDEFINED;
    static CERTRevocationTests *revTests = NULL;
-   PRUint64 *revFlags;
+   PRUint64 *revFlags = NULL;
 
    for(i = 0;i < REV_METHOD_INDEX_MAX;i++) {
        if (revMethodsData[i].testType == REVCONFIG_TEST_UNDEFINED) {
@@ -175,7 +175,9 @@ _init_db(string)
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
-    croak("NSS init");
+    PRErrorCode err = PR_GetError();
+    croak("NSS Init failed: %d = %s\n",
+                 err, PORT_ErrorToString(err));
   }
   
 
