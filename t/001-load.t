@@ -17,7 +17,6 @@ is($cert->serial, '009863c9c6d7bd0ee5', 'serial');
 is($cert->notBefore, 'Mon Oct 15 22:23:31 2012', 'notBefore');
 is($cert->notAfter, 'Tue Oct 15 22:23:31 2013', 'notAfter');
 
-
 sub slurp {
   local $/=undef;
   open (my $file, shift) or die "Couldn't open file: $!";

@@ -19,7 +19,6 @@
 #include "cert.h"
 #include "ocsp.h"
 
-
 /* #include <stdlib.h> */
 /* #include <errno.h> */
 /* #include <fcntl.h> */
@@ -38,6 +37,8 @@
 /* fake our package name */
 typedef CERTCertificate* Crypt__NSS__Certificate;
 typedef CERTCertList* Crypt__NSS__CertList;
+
+char* initstring;
 
 
 //---- Beginning here this is a direct copy from NSS vfychain.c
@@ -153,6 +154,7 @@ _init_nodb()
   
   //secStatus = NSS_Initialize("test2", "", "", SECMOD_DB, initFlags);
   secStatus = NSS_NoDB_Init(NULL);
+  initstring = NULL;
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
@@ -166,12 +168,17 @@ _init_db(string)
 
   PREINIT:
   SECStatus secStatus;
-  char* path;  
+  char* path;
+  STRLEN pathlen;
 
   CODE:
-  path = SvPV_nolen(string);
+  path = SvPV(string, pathlen);
 
   secStatus = NSS_InitReadWrite(path);
+  initstring = (char*) malloc(pathlen+1);
+  bzero(initstring, pathlen+1);
+  memcpy(initstring, path, pathlen);
+  
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
@@ -179,6 +186,23 @@ _init_db(string)
     croak("NSS Init failed: %d = %s\n",
                  err, PORT_ErrorToString(err));
   }
+
+
+void 
+__cleanup(void)
+  
+  PREINIT:
+  SECStatus rv;
+  
+  CODE:
+  rv = NSS_Shutdown();
+
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak( "NSS Shutdown failed %d = %s\n",
+	         err, PORT_ErrorToString(err));
+  }
+  //printf("Destroy was happy\n");
   
 
 SV*
@@ -200,6 +224,7 @@ add_cert_to_db(cert, string)
   defaultDB = CERT_GetDefaultCertDB();
 
   slot = PK11_GetInternalKeySlot();
+
   trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
   if (!trust) {
     croak("Could not create trust");
@@ -222,13 +247,45 @@ add_cert_to_db(cert, string)
     croak("Could not change cert trust");
   }
 
-  PORT_Free(trust);
+  PORT_Free(trust); 
+
+  PK11_FreeSlot(slot);
 
   RETVAL = newSViv(1);   
 
   OUTPUT: 
   RETVAL
 
+
+void
+_reinit()
+
+  PREINIT:
+  SECStatus rv;
+
+  CODE:
+
+  rv = NSS_Shutdown();
+
+  if (rv != SECSuccess) {
+    croak("Shutdown failed");
+  }
+
+
+  if ( initstring == NULL ) {
+    rv = NSS_NoDB_Init(NULL);   
+  } else {
+    //printf("%s\n\n", initstring);
+    rv = NSS_InitReadWrite(initstring);
+  }
+    
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak("NSS Init failed: %d = %s\n",                  
+    err, PORT_ErrorToString(err));
+  } 
+    
+  
 
 void
 dump_certificate_cache_info()
@@ -394,11 +451,12 @@ accessor(cert)
   RETVAL
 
 SV*
-old_verify(cert)
+verify_certificate(cert)
   Crypt::NSS::Certificate cert;
 
   ALIAS:
-  old_verify_pkix = 1
+  verify_certificate_pkix = 1
+  verify_cert = 2
 
   PREINIT:
   SECStatus secStatus;
@@ -420,12 +478,23 @@ old_verify(cert)
   log.head = log.tail = NULL;
   log.count = 0;
 
+  if ( ix == 2 ) {
+
+  secStatus = CERT_VerifyCert(defaultDB, cert,
+                                     PR_TRUE, // check sig 
+				     certUsageSSLServer,
+				     time,
+				     NULL,
+				     NULL);
+  } else {
+
   secStatus = CERT_VerifyCertificate(defaultDB, cert,
                                      PR_TRUE, // check sig 
 				     certificateUsageSSLServer,
 				     time,
 				     NULL,
 				     &log, NULL);
+   }
 
 
   if (secStatus != SECSuccess ) {
@@ -467,7 +536,7 @@ SV* match_name(cert, string)
   RETVAL
 
 SV*
-verify(cert, trustedCertList = NO_INIT)
+verify_pkix(cert, trustedCertList = NO_INIT)
   Crypt::NSS::Certificate cert;
   Crypt::NSS::CertList trustedCertList;
 
@@ -595,6 +664,10 @@ void DESTROY(cert)
   PPCODE:
 
   if ( cert ) {
+    if ( cert->nssCertificate ) {
+	//printf("Is nsscertificate\n");
+	//printf("Refcount: %d\n", cert->nssCertificate->object.refCount);
+    }
     //printf("Certificate %s destroyed\n", cert->subjectName);
     CERT_DestroyCertificate(cert);
     cert = 0;
