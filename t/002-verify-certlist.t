@@ -4,42 +4,42 @@ use warnings;
 
 use Test::More tests=>8;
 
-BEGIN { use_ok( 'Crypt::NSS' ); }
+BEGIN { use_ok( 'NSS' ); }
 
 # load list of root certificates
-my $certlist = Crypt::NSS::CertList->new_from_rootlist('certs/root.ca');
-isa_ok($certlist, 'Crypt::NSS::CertList');
+my $certlist = NSS::CertList->new_from_rootlist('certs/root.ca');
+isa_ok($certlist, 'NSS::CertList');
 
 {
-	my $selfsigned = Crypt::NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
-	isa_ok($selfsigned, 'Crypt::NSS::Certificate');
-	ok(!$selfsigned->verify, 'no verify');
-	ok(!$selfsigned->verify($certlist), 'no verify');
+	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
+	isa_ok($selfsigned, 'NSS::Certificate');
+	ok(!$selfsigned->verify_pkix, 'no verify');
+	ok(!$selfsigned->verify_pkix($certlist), 'no verify');
 }
 
 # these tests need fixed timestamps added...
 # otherwise they will fail in a year or so.
 
 {
-	my $rapidssl = Crypt::NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
-	isa_ok($rapidssl, 'Crypt::NSS::Certificate');
-	ok(!$rapidssl->verify, 'no verify');
-	ok($rapidssl->verify($certlist), 'verify');
+	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
+	isa_ok($rapidssl, 'NSS::Certificate');
+	ok(!$rapidssl->verify_pkix, 'no verify');
+	ok($rapidssl->verify_pkix($certlist), 'verify');
 }
 
 # chain verification sadly does not work correctly with certlists.
 #
 #{
-#	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-#	isa_ok($google, 'Crypt::NSS::Certificate');
+#	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
+#	isa_ok($google, 'NSS::Certificate');
 #	ok(!$google->verify, 'no verify');
 #	ok(!$google->verify($certlist), 'no verify');
 #
 #	# but when we load the thawte intermediate cert too it verifes...
 #	
 #	{
-#		my $thawte = Crypt::NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
-#		isa_ok($thawte, 'Crypt::NSS::Certificate');
+#		my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
+#		isa_ok($thawte, 'NSS::Certificate');
 #		ok(!$google->verify, 'no verify');
 #		ok($google->verify($certlist), 'verify with added thawte');
 #	}

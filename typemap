@@ -1,3 +1,3 @@
-Crypt::NSS::Certificate T_PTROBJ
-Crypt::NSS::CertList T_PTROBJ
+NSS::Certificate T_PTROBJ
+NSS::CertList T_PTROBJ
 
