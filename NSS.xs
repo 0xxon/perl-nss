@@ -35,8 +35,8 @@
 
 
 /* fake our package name */
-typedef CERTCertificate* Crypt__NSS__Certificate;
-typedef CERTCertList* Crypt__NSS__CertList;
+typedef CERTCertificate* NSS__Certificate;
+typedef CERTCertList* NSS__CertList;
 
 char* initstring;
 
@@ -130,7 +130,7 @@ SV* item_to_sv(SECItem* item) {
   return newSVpvn((const char*) item->data, item->len);
 }
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS
+MODULE = NSS    PACKAGE = NSS
 
 PROTOTYPES: DISABLE
 
@@ -207,7 +207,7 @@ __cleanup(void)
 
 SV*
 add_cert_to_db(cert, string)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
   SV* string;
 
   PREINIT:
@@ -294,9 +294,9 @@ dump_certificate_cache_info()
   nss_DumpCertificateCacheInfo();
   
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::CertList
+MODULE = NSS    PACKAGE = NSS::CertList
 
-Crypt::NSS::CertList
+NSS::CertList
 new(class)
 
   PREINIT:
@@ -312,8 +312,8 @@ new(class)
 
 void
 add(certlist, cert)
-  Crypt::NSS::CertList certlist;
-  Crypt::NSS::Certificate cert;
+  NSS::CertList certlist;
+  NSS::Certificate cert;
 
   CODE:
   CERTCertificate* addcert = CERT_DupCertificate(cert);
@@ -322,7 +322,7 @@ add(certlist, cert)
 
 void 
 DESTROY(certlist)
-  Crypt::NSS::CertList certlist;
+  NSS::CertList certlist;
 
   PPCODE:
 
@@ -332,11 +332,11 @@ DESTROY(certlist)
   }
 
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::Certificate
+MODULE = NSS    PACKAGE = NSS::Certificate
 
 SV*
 accessor(cert)
-  Crypt::NSS::Certificate cert  
+  NSS::Certificate cert  
 
   ALIAS:
   subject = 1
@@ -452,7 +452,7 @@ accessor(cert)
 
 SV*
 verify_certificate(cert)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
 
   ALIAS:
   verify_certificate_pkix = 1
@@ -514,7 +514,7 @@ verify_certificate(cert)
   RETVAL
 
 SV* match_name(cert, string)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
   SV* string;
 
   PREINIT:
@@ -537,8 +537,8 @@ SV* match_name(cert, string)
 
 SV*
 verify_pkix(cert, trustedCertList = NO_INIT)
-  Crypt::NSS::Certificate cert;
-  Crypt::NSS::CertList trustedCertList;
+  NSS::Certificate cert;
+  NSS::CertList trustedCertList;
 
   PREINIT:
   SECStatus secStatus;
@@ -619,7 +619,7 @@ verify_pkix(cert, trustedCertList = NO_INIT)
   OUTPUT: 
   RETVAL
 
-Crypt::NSS::Certificate
+NSS::Certificate
 new(class, string)
   SV  *string
 
@@ -659,7 +659,7 @@ new(class, string)
 
 
 void DESTROY(cert)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
 
   PPCODE:
 

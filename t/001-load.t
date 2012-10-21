@@ -4,12 +4,12 @@ use warnings;
 
 use Test::More tests=>8;
 
-BEGIN { use_ok( 'Crypt::NSS' ); }
+BEGIN { use_ok( 'NSS' ); }
 
 my $pem = slurp("certs/selfsigned.crt");
-my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
+my $cert = NSS::Certificate->new_from_pem($pem);
 
-isa_ok($cert, 'Crypt::NSS::Certificate');
+isa_ok($cert, 'NSS::Certificate');
 is($cert->issuer, 'E=email@domain.invalid,CN=Test Certificate,OU=Test Unit,L=Berkeley,ST=California,C=US', 'issuer');
 is($cert->subject, 'E=email@domain.invalid,CN=Test Certificate,OU=Test Unit,L=Berkeley,ST=California,C=US', 'subject');
 ok($cert->version == 1, 'version == 1');

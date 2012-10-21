@@ -12,15 +12,15 @@ BEGIN {
 	# use a temporary directory for our database...
 	$dbdir = File::Temp->newdir();
 
-	use_ok( 'Crypt::NSS', (':dbpath', $dbdir) );
+	use_ok( 'NSS', (':dbpath', $dbdir) );
 }
 
 # load root certificates to db
-Crypt::NSS->load_rootlist('certs/root.ca');
+NSS->load_rootlist('certs/root.ca');
 
 {
-	my $selfsigned = Crypt::NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
-	isa_ok($selfsigned, 'Crypt::NSS::Certificate');
+	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
+	isa_ok($selfsigned, 'NSS::Certificate');
 	ok(!$selfsigned->verify_pkix, 'no verify');
 	ok(!$selfsigned->verify_cert, 'no verify');
 	ok(!$selfsigned->verify_certificate, 'no verify');
@@ -31,8 +31,8 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 # otherwise they will fail in a year or so.
 
 {
-	my $rapidssl = Crypt::NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
-	isa_ok($rapidssl, 'Crypt::NSS::Certificate');
+	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
+	isa_ok($rapidssl, 'NSS::Certificate');
 	ok($rapidssl->verify_pkix, 'verify');
 	ok($rapidssl->verify_cert, 'verify');
 	ok($rapidssl->verify_certificate, 'verify');
@@ -42,8 +42,8 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 # chain verification
 
 {
-	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-	isa_ok($google, 'Crypt::NSS::Certificate');
+	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'NSS::Certificate');
 	ok(!$google->verify_pkix, 'no verify');
 	ok(!$google->verify_cert, 'no verify');
 	ok(!$google->verify_certificate, 'no verify');
@@ -52,8 +52,8 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 	# but when we load the thawte intermediate cert too it verifes...
 	
 	{
-		my $thawte = Crypt::NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
-		isa_ok($thawte, 'Crypt::NSS::Certificate');
+		my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
+		isa_ok($thawte, 'NSS::Certificate');
 		ok($google->verify_pkix, 'verify with added thawte');
 		ok($google->verify_cert, 'verify with added thawte');
 		ok($google->verify_certificate, 'verify with added thawte');
@@ -67,11 +67,11 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 # I guess this is a memory-leak on my part, but I do absolutely not know where
 
 # Dirty fix: reinit NSS
-Crypt::NSS::_reinit();
+NSS::_reinit();
 
 {
-	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-	isa_ok($google, 'Crypt::NSS::Certificate');
+	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'NSS::Certificate');
 	ok(!$google->verify_pkix, 'no verify');
 	ok(!$google->verify_cert, 'no verify');
 	ok(!$google->verify_certificate, 'no verify');
