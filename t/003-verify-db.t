@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>26;
+use Test::More tests=>31;
 
 use File::Temp;
 
@@ -25,6 +25,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok(!$selfsigned->verify_cert, 'no verify');
 	ok(!$selfsigned->verify_certificate, 'no verify');
 	ok(!$selfsigned->verify_certificate_pkix, 'no verify');
+	ok(!$selfsigned->verify_mozilla, 'no verify');
 }
 
 # these tests need fixed timestamps added...
@@ -37,6 +38,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok($rapidssl->verify_cert, 'verify');
 	ok($rapidssl->verify_certificate, 'verify');
 	ok($rapidssl->verify_certificate_pkix, 'verify');
+	ok($rapidssl->verify_mozilla, 'verify');
 }
 
 # chain verification
@@ -48,6 +50,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok(!$google->verify_cert, 'no verify');
 	ok(!$google->verify_certificate, 'no verify');
 	ok(!$google->verify_certificate_pkix, 'no verify');
+	ok(!$google->verify_mozilla, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
 	
@@ -58,6 +61,7 @@ NSS->load_rootlist('certs/root.ca');
 		ok($google->verify_cert, 'verify with added thawte');
 		ok($google->verify_certificate, 'verify with added thawte');
 		ok($google->verify_certificate_pkix, 'verify with added thawte');
+		ok($google->verify_mozilla, 'verify with added thawte');
 	}
 }
 
@@ -76,6 +80,7 @@ NSS::_reinit();
 	ok(!$google->verify_cert, 'no verify');
 	ok(!$google->verify_certificate, 'no verify');
 	ok(!$google->verify_certificate_pkix, 'no verify');
+	ok(!$google->verify_mozilla, 'no verify');
 }
 
 sub slurp {
