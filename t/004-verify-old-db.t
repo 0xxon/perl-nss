@@ -4,22 +4,23 @@ use warnings;
 
 use Test::More tests=>11;
 
+my $dbdir;
 
 BEGIN {
  use File::Temp;
  # use a temporary directory for our database...
- my $dbdir = File::Temp->newdir();
+ $dbdir = File::Temp->newdir();
  use_ok( 'Crypt::NSS', (':dbpath', $dbdir) ); 
 }
 
 # load root certificates to db
 Crypt::NSS->load_rootlist('certs/root.ca');
-
 {
 	my $selfsigned = Crypt::NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'Crypt::NSS::Certificate');
-	ok(!$selfsigned->old_verify, 'no verify');
+	ok(!$selfsigned->verify_cert, 'no verify');
 }
+
 
 # these tests need fixed timestamps added...
 # otherwise they will fail in a year or so.
@@ -27,7 +28,7 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 {
 	my $rapidssl = Crypt::NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'Crypt::NSS::Certificate');
-	ok($rapidssl->old_verify, 'verify');
+	ok($rapidssl->verify_cert, 'verify');
 }
 
 
@@ -36,27 +37,32 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 {
 	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'Crypt::NSS::Certificate');
-	ok(!$google->old_verify, 'no verify');
+	ok(!$google->verify_cert, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
 	
 	{
 		my $thawte = Crypt::NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 		isa_ok($thawte, 'Crypt::NSS::Certificate');
-		ok($google->old_verify, 'verify with added thawte');
+		ok($google->verify_cert, 'verify with added thawte');
 	}
 }
+
 
 
 # and apparently due to some magic - the intermediate is now cached, even after all certs 
 # have been destroyed.
 # be aware of this trickery...
-# I guess this is a memory-leak on my part, but I do absolutely not know where
+
+# Dirty fix: reinit NSS
+
+Crypt::NSS::_reinit();
+
 
 {
 	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'Crypt::NSS::Certificate');
-	ok($google->old_verify, 'verify');
+	ok(!$google->verify_cert, 'verify');
 }
 
 sub slurp {

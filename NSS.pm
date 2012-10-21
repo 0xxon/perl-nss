@@ -75,6 +75,10 @@ sub import {
 	}
 }
 
+END {
+  __PACKAGE__->__cleanup;
+}
+
 package Crypt::NSS::CertList;
 
 sub new_from_rootlist {

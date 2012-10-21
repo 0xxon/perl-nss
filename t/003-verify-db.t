@@ -6,10 +6,11 @@ use Test::More tests=>11;
 
 use File::Temp;
 
+my $dbdir;
 
 BEGIN { 
 	# use a temporary directory for our database...
-	my $dbdir = File::Temp->newdir();
+	$dbdir = File::Temp->newdir();
 
 	use_ok( 'Crypt::NSS', (':dbpath', $dbdir) );
 }
@@ -20,7 +21,7 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 {
 	my $selfsigned = Crypt::NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'Crypt::NSS::Certificate');
-	ok(!$selfsigned->verify, 'no verify');
+	ok(!$selfsigned->verify_pkix, 'no verify');
 }
 
 # these tests need fixed timestamps added...
@@ -29,7 +30,7 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 {
 	my $rapidssl = Crypt::NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'Crypt::NSS::Certificate');
-	ok($rapidssl->verify, 'verify');
+	ok($rapidssl->verify_pkix, 'verify');
 }
 
 # chain verification
@@ -37,14 +38,14 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 {
 	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'Crypt::NSS::Certificate');
-	ok(!$google->verify, 'no verify');
+	ok(!$google->verify_pkix, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
 	
 	{
 		my $thawte = Crypt::NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 		isa_ok($thawte, 'Crypt::NSS::Certificate');
-		ok($google->verify, 'verify with added thawte');
+		ok($google->verify_pkix, 'verify with added thawte');
 	}
 }
 
@@ -53,10 +54,13 @@ Crypt::NSS->load_rootlist('certs/root.ca');
 # be aware of this trickery...
 # I guess this is a memory-leak on my part, but I do absolutely not know where
 
+# Dirty fix: reinit NSS
+Crypt::NSS::_reinit();
+
 {
 	my $google = Crypt::NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'Crypt::NSS::Certificate');
-	ok($google->verify, 'verify');
+	ok(!$google->verify_pkix, 'verify');
 }
 
 sub slurp {
