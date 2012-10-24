@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>36;
+use Test::More tests=>42;
 
 use File::Temp;
 
