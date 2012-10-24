@@ -16,8 +16,8 @@ isa_ok($certlist, 'NSS::CertList');
 {
 	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'NSS::Certificate');
-	ok(!$selfsigned->verify_pkix($vfytime), 'no verify');
-	ok(!$selfsigned->verify_pkix($vfytime, $certlist), 'no verify');
+	is($selfsigned->verify_pkix($vfytime), -8179, 'no verify');
+	is($selfsigned->verify_pkix($vfytime, $certlist), -8179, 'no verify');
 }
 
 # these tests need fixed timestamps added...
@@ -26,9 +26,9 @@ isa_ok($certlist, 'NSS::CertList');
 {
 	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'NSS::Certificate');
-	ok(!$rapidssl->verify_pkix($vfytime), 'no verify');
-	ok($rapidssl->verify_pkix($vfytime, $certlist), 'verify');
-	ok(!$rapidssl->verify_pkix($invalidtime, $certlist), 'no verify');
+	is($rapidssl->verify_pkix($vfytime), -8172, 'no verify');
+	is($rapidssl->verify_pkix($vfytime, $certlist), 1,'verify');
+	is($rapidssl->verify_pkix($invalidtime, $certlist), -8181, 'no verify');
 }
 
 # chain verification sadly does not work correctly with certlists.
