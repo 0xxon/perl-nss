@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>30;
+use Test::More tests=>36;
 
 use File::Temp;
 
@@ -87,6 +87,28 @@ NSS::_reinit();
 	is($google->verify_certificate($vfytime), -8179, 'no verify');
 	is($google->verify_certificate_pkix($vfytime), -8179, 'no verify');
 }
+
+{
+	# now, let's add the thawte-cert to the db
+	my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
+	isa_ok($thawte, 'NSS::Certificate');
+	NSS::add_cert_to_db($thawte, $thawte->subject);
+}
+
+# kill NSS again
+#
+NSS::_reinit();
+
+# and this time it should validate
+{
+	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'NSS::Certificate');
+	is($google->verify_pkix($vfytime), 1, 'verify');
+	is($google->verify_cert($vfytime), 1, 'verify');
+	is($google->verify_certificate($vfytime), 1, 'verify');
+	is($google->verify_certificate_pkix($vfytime), 1, 'verify');
+}
+	
 
 sub slurp {
   local $/=undef;
