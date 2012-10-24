@@ -657,8 +657,9 @@ verify_mozilla(cert)
   RETVAL
 
 SV*
-verify_certificate(cert)
+verify_certificate(cert, timedouble = NO_INIT)
   NSS::Certificate cert;
+  SV* timedouble;
 
   ALIAS:
   verify_certificate_pkix = 1
@@ -673,8 +674,14 @@ verify_certificate(cert)
   CODE:
   defaultDB = CERT_GetDefaultCertDB();
 
-  if (!time)
+  if ( items == 1 ) {
     time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }
 
   if ( ix == 1 ) 
     CERT_SetUsePKIXForValidation(PR_TRUE);
@@ -742,8 +749,9 @@ SV* match_name(cert, string)
   RETVAL
 
 SV*
-verify_pkix(cert, trustedCertList = NO_INIT)
+verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
   NSS::Certificate cert;
+  SV* timedouble;
   NSS::CertList trustedCertList;
 
   PREINIT:
@@ -776,7 +784,17 @@ verify_pkix(cert, trustedCertList = NO_INIT)
   cvin[inParamIndex].value.pointer.revocation = &rev;
   inParamIndex++;
 
-  if ( items == 2 ) {
+  if ( items >= 2 ) {
+    PRTime time;
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+    cvin[inParamIndex].type = cert_pi_date;
+    cvin[inParamIndex].value.scalar.time = time;
+    inParamIndex++;
+  }
+  if ( items == 3 ) {
     // we have a trustedCertList
     cvin[inParamIndex].type = cert_pi_trustAnchors;
     cvin[inParamIndex].value.pointer.chain = trustedCertList;

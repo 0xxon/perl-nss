@@ -2,11 +2,14 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>31;
+use Test::More tests=>35;
 
 use File::Temp;
 
 my $dbdir;
+
+my $vfytime = 1351057173; # time at which certificates were valid
+my $invalidtime = 42; # well, certainly not valid here.
 
 BEGIN { 
 	# use a temporary directory for our database...
@@ -21,24 +24,28 @@ NSS->load_rootlist('certs/root.ca');
 {
 	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'NSS::Certificate');
-	ok(!$selfsigned->verify_pkix, 'no verify');
-	ok(!$selfsigned->verify_cert, 'no verify');
-	ok(!$selfsigned->verify_certificate, 'no verify');
-	ok(!$selfsigned->verify_certificate_pkix, 'no verify');
+	ok(!$selfsigned->verify_pkix($vfytime), 'no verify');
+	ok(!$selfsigned->verify_cert($vfytime), 'no verify');
+	ok(!$selfsigned->verify_certificate($vfytime), 'no verify');
+	ok(!$selfsigned->verify_certificate_pkix($vfytime), 'no verify');
 	ok(!$selfsigned->verify_mozilla, 'no verify');
 }
-
-# these tests need fixed timestamps added...
-# otherwise they will fail in a year or so.
 
 {
 	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'NSS::Certificate');
-	ok($rapidssl->verify_pkix, 'verify');
-	ok($rapidssl->verify_cert, 'verify');
-	ok($rapidssl->verify_certificate, 'verify');
-	ok($rapidssl->verify_certificate_pkix, 'verify');
+	ok($rapidssl->verify_pkix($vfytime), 'verify');
+	ok($rapidssl->verify_cert($vfytime), 'verify');
+	ok($rapidssl->verify_certificate($vfytime), 'verify');
+	ok($rapidssl->verify_certificate_pkix($vfytime), 'verify');
 	ok($rapidssl->verify_mozilla, 'verify');
+	
+	# but not with invalid time
+	
+	ok(!$rapidssl->verify_pkix($invalidtime), 'no verify');
+	ok(!$rapidssl->verify_cert($invalidtime), 'no verify');
+	ok(!$rapidssl->verify_certificate($invalidtime), 'no verify');
+	ok(!$rapidssl->verify_certificate_pkix($invalidtime), 'no verify');
 }
 
 # chain verification
@@ -46,10 +53,10 @@ NSS->load_rootlist('certs/root.ca');
 {
 	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'NSS::Certificate');
-	ok(!$google->verify_pkix, 'no verify');
-	ok(!$google->verify_cert, 'no verify');
-	ok(!$google->verify_certificate, 'no verify');
-	ok(!$google->verify_certificate_pkix, 'no verify');
+	ok(!$google->verify_pkix($vfytime), 'no verify');
+	ok(!$google->verify_cert($vfytime), 'no verify');
+	ok(!$google->verify_certificate($vfytime), 'no verify');
+	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
 	ok(!$google->verify_mozilla, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
@@ -57,10 +64,10 @@ NSS->load_rootlist('certs/root.ca');
 	{
 		my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 		isa_ok($thawte, 'NSS::Certificate');
-		ok($google->verify_pkix, 'verify with added thawte');
-		ok($google->verify_cert, 'verify with added thawte');
-		ok($google->verify_certificate, 'verify with added thawte');
-		ok($google->verify_certificate_pkix, 'verify with added thawte');
+		ok($google->verify_pkix($vfytime), 'verify with added thawte');
+		ok($google->verify_cert($vfytime), 'verify with added thawte');
+		ok($google->verify_certificate($vfytime), 'verify with added thawte');
+		ok($google->verify_certificate_pkix($vfytime), 'verify with added thawte');
 		ok($google->verify_mozilla, 'verify with added thawte');
 	}
 }
@@ -76,10 +83,10 @@ NSS::_reinit();
 {
 	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'NSS::Certificate');
-	ok(!$google->verify_pkix, 'no verify');
-	ok(!$google->verify_cert, 'no verify');
-	ok(!$google->verify_certificate, 'no verify');
-	ok(!$google->verify_certificate_pkix, 'no verify');
+	ok(!$google->verify_pkix($vfytime), 'no verify');
+	ok(!$google->verify_cert($vfytime), 'no verify');
+	ok(!$google->verify_certificate($vfytime), 'no verify');
+	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
 	ok(!$google->verify_mozilla, 'no verify');
 }
 
