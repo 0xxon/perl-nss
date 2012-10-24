@@ -648,10 +648,10 @@ verify_mozilla(cert, timedouble = NO_INIT)
 
 
   if (rv != SECSuccess ) {
-    RETVAL = &PL_sv_no;
+    RETVAL = newSViv(PR_GetError()); // return error code
   } else {
-    RETVAL = &PL_sv_yes;
-  }  
+    RETVAL = newSViv(1); 
+  }
 
     if (certList) {
       CERT_DestroyCertList(certList);
@@ -717,9 +717,9 @@ verify_certificate(cert, timedouble = NO_INIT)
 
 
   if (secStatus != SECSuccess ) {
-    RETVAL = &PL_sv_no;
+    RETVAL = newSViv(PR_GetError()); // return error code
   } else {
-    RETVAL = &PL_sv_yes;
+    RETVAL = newSViv(1); // return 1 on success
   }  
 
   for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
@@ -827,7 +827,7 @@ verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
   
 
   if (secStatus != SECSuccess ) {
-    RETVAL = &PL_sv_no;
+    RETVAL = newSViv(PR_GetError()); // return error code
   } else { 
     /* CERTCertificate* issuerCert = cvout[0].value.pointer.cert;
     CERTCertList* builtChain = cvout[1].value.pointer.chain;    
@@ -835,7 +835,7 @@ verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
     CERT_DestroyCertList(builtChain);
     CERT_DestroyCertificate(issuerCert); */
    
-    RETVAL = &PL_sv_yes;
+    RETVAL = newSViv(1);
   }  
     
   // destroy refs in the log 

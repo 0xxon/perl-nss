@@ -24,29 +24,32 @@ NSS->load_rootlist('certs/root.ca');
 {
 	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'NSS::Certificate');
-	ok(!$selfsigned->verify_pkix($vfytime), 'no verify');
-	ok(!$selfsigned->verify_cert($vfytime), 'no verify');
-	ok(!$selfsigned->verify_certificate($vfytime), 'no verify');
-	ok(!$selfsigned->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$selfsigned->verify_mozilla($vfytime), 'no verify');
+	# lol. The different verify operatins give different 
+	is($selfsigned->verify_pkix($vfytime), -8179, 'no verify');
+	is($selfsigned->verify_cert($vfytime), -8172, 'no verify');
+	is($selfsigned->verify_certificate($vfytime), -8172, 'no verify');
+	is($selfsigned->verify_certificate_pkix($vfytime), -8179, 'no verify');
+	is($selfsigned->verify_mozilla($vfytime), -8179, 'no verify');
 }
 
 {
 	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'NSS::Certificate');
-	ok($rapidssl->verify_pkix($vfytime), 'verify');
-	ok($rapidssl->verify_cert($vfytime), 'verify');
-	ok($rapidssl->verify_certificate($vfytime), 'verify');
-	ok($rapidssl->verify_certificate_pkix($vfytime), 'verify');
-	ok($rapidssl->verify_mozilla($vfytime), 'verify');
+	is($rapidssl->verify_pkix($vfytime), 1, 'verify');
+	is($rapidssl->verify_cert($vfytime), 1, 'verify');
+	is($rapidssl->verify_certificate($vfytime), 1, 'verify');
+	is($rapidssl->verify_certificate_pkix($vfytime), 1, 'verify');
+	is($rapidssl->verify_mozilla($vfytime), 1, 'verify');
 	
 	# but not with invalid time
 	
-	ok(!$rapidssl->verify_pkix($invalidtime), 'no verify');
-	ok(!$rapidssl->verify_cert($invalidtime), 'no verify');
-	ok(!$rapidssl->verify_certificate($invalidtime), 'no verify');
-	ok(!$rapidssl->verify_certificate_pkix($invalidtime), 'no verify');
-	ok(!$rapidssl->verify_mozilla($invalidtime), 'no verify');
+	is($rapidssl->verify_pkix($invalidtime), -8181, 'no verify');
+	is($rapidssl->verify_cert($invalidtime), -8181, 'no verify');
+	# Fun. Those apparently try chain resolution before date checking
+	is($rapidssl->verify_certificate($invalidtime), -8179, 'no verify');
+	is($rapidssl->verify_certificate_pkix($invalidtime), -8179, 'no verify');
+	# invalid OID???
+	is($rapidssl->verify_mozilla($invalidtime), -8049,'no verify');
 }
 
 # chain verification
@@ -54,22 +57,23 @@ NSS->load_rootlist('certs/root.ca');
 {
 	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'NSS::Certificate');
-	ok(!$google->verify_pkix($vfytime), 'no verify');
-	ok(!$google->verify_cert($vfytime), 'no verify');
-	ok(!$google->verify_certificate($vfytime), 'no verify');
-	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$google->verify_mozilla($vfytime), 'no verify');
+	# something they agree on. At last.
+	is($google->verify_pkix($vfytime), -8179, 'no verify');
+	is($google->verify_cert($vfytime), -8179, 'no verify');
+	is($google->verify_certificate($vfytime), -8179, 'no verify');
+	is($google->verify_certificate_pkix($vfytime), -8179, 'no verify');
+	is($google->verify_mozilla($vfytime), -8179, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
 	
 	{
 		my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 		isa_ok($thawte, 'NSS::Certificate');
-		ok($google->verify_pkix($vfytime), 'verify with added thawte');
-		ok($google->verify_cert($vfytime), 'verify with added thawte');
-		ok($google->verify_certificate($vfytime), 'verify with added thawte');
-		ok($google->verify_certificate_pkix($vfytime), 'verify with added thawte');
-		ok($google->verify_mozilla($vfytime), 'verify with added thawte');
+		is($google->verify_pkix($vfytime), 1, 'verify with added thawte');
+		is($google->verify_cert($vfytime), 1, 'verify with added thawte');
+		is($google->verify_certificate($vfytime), 1, 'verify with added thawte');
+		is($google->verify_certificate_pkix($vfytime), 1, 'verify with added thawte');
+		is($google->verify_mozilla($vfytime), 1, 'verify with added thawte');
 	}
 }
 
@@ -84,11 +88,11 @@ NSS::_reinit();
 {
 	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
 	isa_ok($google, 'NSS::Certificate');
-	ok(!$google->verify_pkix($vfytime), 'no verify');
-	ok(!$google->verify_cert($vfytime), 'no verify');
-	ok(!$google->verify_certificate($vfytime), 'no verify');
-	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$google->verify_mozilla($vfytime), 'no verify');
+	is($google->verify_pkix($vfytime), -8179, 'no verify');
+	is($google->verify_cert($vfytime), -8179, 'no verify');
+	is($google->verify_certificate($vfytime), -8179, 'no verify');
+	is($google->verify_certificate_pkix($vfytime), -8179, 'no verify');
+	is($google->verify_mozilla($vfytime), -8179, 'no verify');
 }
 
 sub slurp {
