@@ -2,7 +2,10 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>8;
+use Test::More tests=>9;
+
+my $vfytime = 1351057173; # time at which certificates were valid
+my $invalidtime = 42; # well, certainly not valid here.
 
 BEGIN { use_ok( 'NSS' ); }
 
@@ -13,8 +16,8 @@ isa_ok($certlist, 'NSS::CertList');
 {
 	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'NSS::Certificate');
-	ok(!$selfsigned->verify_pkix, 'no verify');
-	ok(!$selfsigned->verify_pkix($certlist), 'no verify');
+	ok(!$selfsigned->verify_pkix($vfytime), 'no verify');
+	ok(!$selfsigned->verify_pkix($vfytime, $certlist), 'no verify');
 }
 
 # these tests need fixed timestamps added...
@@ -23,8 +26,9 @@ isa_ok($certlist, 'NSS::CertList');
 {
 	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
 	isa_ok($rapidssl, 'NSS::Certificate');
-	ok(!$rapidssl->verify_pkix, 'no verify');
-	ok($rapidssl->verify_pkix($certlist), 'verify');
+	ok(!$rapidssl->verify_pkix($vfytime), 'no verify');
+	ok($rapidssl->verify_pkix($vfytime, $certlist), 'verify');
+	ok(!$rapidssl->verify_pkix($invalidtime, $certlist), 'no verify');
 }
 
 # chain verification sadly does not work correctly with certlists.
