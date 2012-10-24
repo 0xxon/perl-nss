@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>35;
+use Test::More tests=>36;
 
 use File::Temp;
 
@@ -28,7 +28,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok(!$selfsigned->verify_cert($vfytime), 'no verify');
 	ok(!$selfsigned->verify_certificate($vfytime), 'no verify');
 	ok(!$selfsigned->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$selfsigned->verify_mozilla, 'no verify');
+	ok(!$selfsigned->verify_mozilla($vfytime), 'no verify');
 }
 
 {
@@ -38,7 +38,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok($rapidssl->verify_cert($vfytime), 'verify');
 	ok($rapidssl->verify_certificate($vfytime), 'verify');
 	ok($rapidssl->verify_certificate_pkix($vfytime), 'verify');
-	ok($rapidssl->verify_mozilla, 'verify');
+	ok($rapidssl->verify_mozilla($vfytime), 'verify');
 	
 	# but not with invalid time
 	
@@ -46,6 +46,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok(!$rapidssl->verify_cert($invalidtime), 'no verify');
 	ok(!$rapidssl->verify_certificate($invalidtime), 'no verify');
 	ok(!$rapidssl->verify_certificate_pkix($invalidtime), 'no verify');
+	ok(!$rapidssl->verify_mozilla($invalidtime), 'no verify');
 }
 
 # chain verification
@@ -57,7 +58,7 @@ NSS->load_rootlist('certs/root.ca');
 	ok(!$google->verify_cert($vfytime), 'no verify');
 	ok(!$google->verify_certificate($vfytime), 'no verify');
 	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$google->verify_mozilla, 'no verify');
+	ok(!$google->verify_mozilla($vfytime), 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
 	
@@ -68,7 +69,7 @@ NSS->load_rootlist('certs/root.ca');
 		ok($google->verify_cert($vfytime), 'verify with added thawte');
 		ok($google->verify_certificate($vfytime), 'verify with added thawte');
 		ok($google->verify_certificate_pkix($vfytime), 'verify with added thawte');
-		ok($google->verify_mozilla, 'verify with added thawte');
+		ok($google->verify_mozilla($vfytime), 'verify with added thawte');
 	}
 }
 
@@ -87,7 +88,7 @@ NSS::_reinit();
 	ok(!$google->verify_cert($vfytime), 'no verify');
 	ok(!$google->verify_certificate($vfytime), 'no verify');
 	ok(!$google->verify_certificate_pkix($vfytime), 'no verify');
-	ok(!$google->verify_mozilla, 'no verify');
+	ok(!$google->verify_mozilla($vfytime), 'no verify');
 }
 
 sub slurp {

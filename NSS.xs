@@ -553,8 +553,9 @@ accessor(cert)
 
 
 SV*
-verify_mozilla(cert)
+verify_mozilla(cert, timedouble = NO_INIT)
   NSS::Certificate cert;
+  SV* timedouble;
 
   PREINIT:
   SECStatus rv;
@@ -604,9 +605,14 @@ verify_mozilla(cert)
 
   defaultDB = CERT_GetDefaultCertDB();
 
-  if (!time)
+  if ( items == 1 ) {
     time = PR_Now();
-
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }
 
   rv = CERT_VerifyCert(defaultDB, cert,
                                      PR_TRUE, // check sig 
