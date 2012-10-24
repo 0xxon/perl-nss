@@ -620,6 +620,12 @@ verify_mozilla(cert, timedouble = NO_INIT)
 				     time,
 				     NULL,
 				     NULL);
+  
+  if (rv != SECSuccess ) {
+    RETVAL = newSViv(PR_GetError()); // return error code
+  } else {
+    RETVAL = newSViv(1); 
+  }
 
   CERTCertList *certList = NULL;
   certList = CERT_GetCertChainFromCert(cert, PR_Now(), certUsageSSLCA);
@@ -641,17 +647,14 @@ verify_mozilla(cert, timedouble = NO_INIT)
       
     if (blacklistErrorCode != 0) {
       PORT_SetError(blacklistErrorCode);
+      SvREFCNT_dec(RETVAL); // kill the old one
+      RETVAL = newSViv(blacklistErrorCode); // re-set error code.
       rv = SECFailure;
     }
   }
 
 
 
-  if (rv != SECSuccess ) {
-    RETVAL = newSViv(PR_GetError()); // return error code
-  } else {
-    RETVAL = newSViv(1); 
-  }
 
     if (certList) {
       CERT_DestroyCertList(certList);
