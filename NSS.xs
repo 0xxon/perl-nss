@@ -310,6 +310,9 @@ add_cert_to_db(cert, string)
   NSS::Certificate cert;
   SV* string;
 
+  ALIAS:
+  add_trusted_cert_to_db = 1
+
   PREINIT:
   PK11SlotInfo *slot = NULL;
   CERTCertTrust *trust = NULL;
@@ -325,16 +328,20 @@ add_cert_to_db(cert, string)
 
   slot = PK11_GetInternalKeySlot();
 
-  trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
-  if (!trust) {
-    croak("Could not create trust");
+  if ( ix == 1 ) {
+    // trusted Certificate
+  
+    trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
+    if (!trust) {
+      croak("Could not create trust");
+    }
+  
+    rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
+    if (rv) {
+      croak("unable to decode trust string");
+    }
   }
-
-  rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
-  if (rv) {
-    croak("unable to decode trust string");
-  }
-
+  
   rv = PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, nick, PR_FALSE);
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
@@ -342,9 +349,11 @@ add_cert_to_db(cert, string)
 	         err, PORT_ErrorToString(err));
   }
 
-  rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
-  if (rv != SECSuccess) {
-    croak("Could not change cert trust");
+  if ( ix == 1 ) {
+    rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
+    if (rv != SECSuccess) {
+      croak("Could not change cert trust");
+    }
   }
 
   PORT_Free(trust); 
@@ -368,7 +377,8 @@ _reinit()
   rv = NSS_Shutdown();
 
   if (rv != SECSuccess) {
-    croak("Shutdown failed");
+    PRErrorCode err = PR_GetError();
+    croak( "NSS Shutdown failed during reinit. Last error-code: %d = %s\n", err, PORT_ErrorToString(err));
   }
 
 

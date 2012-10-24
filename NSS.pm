@@ -40,7 +40,7 @@ sub load_rootlist {
 				#say "|$pem|";
 				my $cert = NSS::Certificate->new_from_pem($pem);
 				$pem = "";
-				add_cert_to_db($cert, $cert->subject);
+				add_trusted_cert_to_db($cert, $cert->subject);
 			}
 		}
 	}
