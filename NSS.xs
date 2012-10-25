@@ -580,8 +580,8 @@ new(class, string)
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",
 	         err, PORT_ErrorToString(err));
-    PORT_Free(item.data);
   }
+  PORT_Free(item.data);
 
   RETVAL = cert;
 
