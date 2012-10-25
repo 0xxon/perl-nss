@@ -206,6 +206,39 @@ configureRevocationParams(CERTRevocationFlags *flags)
 
 //---- end direct copy from vfychain.c
 
+PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
+  switch(usage) {
+    case certUsageSSLClient:
+      return certificateUsageSSLClient;
+    case certUsageSSLServer:
+      return certificateUsageSSLServer;
+    case certUsageSSLServerWithStepUp:
+      return certificateUsageSSLServerWithStepUp;
+    case certUsageSSLCA:
+      return certificateUsageSSLCA;
+    case certUsageEmailSigner:
+      return certificateUsageEmailSigner;
+    case certUsageEmailRecipient:
+      return certificateUsageEmailRecipient;
+    case certUsageObjectSigner:
+      return certificateUsageObjectSigner;
+    case certUsageUserCertImport:
+      return certificateUsageUserCertImport;
+    case certUsageVerifyCA:
+      return certificateUsageVerifyCA;
+    case certUsageProtectedObjectSigner:
+      return certificateUsageProtectedObjectSigner;
+    case certUsageStatusResponder:
+      return certificateUsageStatusResponder;
+    case certUsageAnyCA:
+      return certificateUsageAnyCA;
+    default:
+      croak("Unknown certificate usage %d", usage);
+  }
+}
+    
+	
+
 SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
   char *cert;
@@ -236,6 +269,31 @@ PROTOTYPES: DISABLE
 
 BOOT:
 {
+  HV *stash = gv_stashpvn("NSS", 3, TRUE);
+
+  struct { char *n; I32 s; } NSS__const[] = {
+
+  {"certUsageSSLClient", certUsageSSLClient},
+  {"certUsageSSLServer", certUsageSSLServer},
+  {"certUsageSSLServerWithStepUp", certUsageSSLServerWithStepUp},
+  {"certUsageSSLCA", certUsageSSLCA},
+  {"certUsageEmailSigner", certUsageEmailSigner},
+  {"certUsageEmailRecipient", certUsageEmailRecipient},
+  {"certUsageObjectSigner", certUsageObjectSigner},
+  {"certUsageUserCertImport", certUsageUserCertImport},
+  {"certUsageVerifyCA", certUsageVerifyCA},
+  {"certUsageProtectedObjectSigner", certUsageProtectedObjectSigner},
+  {"certUsageStatusResponder",  certUsageStatusResponder},
+  {"certUsageAnyCA",  certUsageAnyCA}
+  };
+
+  char *name;
+  int i;
+
+  for (i = 0; (name = NSS__const[i].n); i++) {
+    newCONSTSUB(stash, name, newSViv(NSS__const[i].s));
+  }
+
   
   PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
@@ -676,9 +734,10 @@ verify_mozilla(cert, timedouble = NO_INIT)
   RETVAL
 
 SV*
-verify_certificate(cert, timedouble = NO_INIT)
+verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   NSS::Certificate cert;
   SV* timedouble;
+  I32 usage;
 
   ALIAS:
   verify_certificate_pkix = 1
@@ -714,7 +773,7 @@ verify_certificate(cert, timedouble = NO_INIT)
 
   secStatus = CERT_VerifyCert(defaultDB, cert,
                                      PR_TRUE, // check sig 
-				     certUsageSSLServer,
+				     usage,
 				     time,
 				     NULL,
 				     NULL);
@@ -722,7 +781,7 @@ verify_certificate(cert, timedouble = NO_INIT)
 
   secStatus = CERT_VerifyCertificate(defaultDB, cert,
                                      PR_TRUE, // check sig 
-				     certificateUsageSSLServer,
+				     cert_usage_to_certificate_usage(usage),
 				     time,
 				     NULL,
 				     &log, NULL);
@@ -768,9 +827,10 @@ SV* match_name(cert, string)
   RETVAL
 
 SV*
-verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
+verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertList = NO_INIT)
   NSS::Certificate cert;
   SV* timedouble;
+  I32 usage;
   NSS::CertList trustedCertList;
 
   PREINIT:
@@ -813,7 +873,7 @@ verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
     cvin[inParamIndex].value.scalar.time = time;
     inParamIndex++;
   }
-  if ( items == 3 ) {
+  if ( items == 4 ) {
     // we have a trustedCertList
     cvin[inParamIndex].type = cert_pi_trustAnchors;
     cvin[inParamIndex].value.pointer.chain = trustedCertList;
@@ -835,7 +895,7 @@ verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
   cvout[2].value.pointer.log = &log; */
   cvout[0].type = cert_po_end;
 
-  secStatus = CERT_PKIXVerifyCert(cert, certificateUsageSSLServer,
+  secStatus = CERT_PKIXVerifyCert(cert, cert_usage_to_certificate_usage(usage),
                                   cvin, cvout, NULL);
   
 
@@ -892,8 +952,8 @@ new(class, string)
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",
 	         err, PORT_ErrorToString(err));
-    PORT_Free(item.data);
   }
+  PORT_Free(item.data);
 
   RETVAL = cert;
 

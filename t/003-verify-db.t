@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>42;
+use Test::More tests=>46;
 
 use File::Temp;
 
@@ -99,6 +99,17 @@ NSS::_reinit();
 	my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 	isa_ok($thawte, 'NSS::Certificate');
 	NSS::add_cert_to_db($thawte, $thawte->subject);
+	is($thawte->verify_pkix($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_cert($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_certificate($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_certificate_pkix($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_mozilla($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	
+	is($thawte->verify_pkix($vfytime), -8102, 'verify ca');
+	is($thawte->verify_cert($vfytime), -8102, 'verify ca');
+	is($thawte->verify_certificate($vfytime), -8102, 'verify ca');
+	is($thawte->verify_certificate_pkix($vfytime), -8102, 'verify ca');
+	is($thawte->verify_mozilla($vfytime), -8102, 'verify ca');
 }
 
 # kill NSS again
