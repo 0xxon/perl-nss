@@ -754,7 +754,7 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   CODE:
   defaultDB = CERT_GetDefaultCertDB();
 
-  if ( items == 1 ) {
+  if ( items == 1 || SvIV(timedouble) == 0 ) {
     time = PR_Now();
   } else {
     double tmptime = SvNV(timedouble);
@@ -865,7 +865,7 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   cvin[inParamIndex].value.pointer.revocation = &rev;
   inParamIndex++;
 
-  if ( items >= 2 ) {
+  if ( items >= 2 && SvIV(timedouble) > 0 ) {
     PRTime time;
     double tmptime = SvNV(timedouble);
     // time contains seconds since epoch - netscape expects microseconds
