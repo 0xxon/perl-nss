@@ -19,7 +19,6 @@
 #include "cert.h"
 #include "ocsp.h"
 
-
 /* #include <stdlib.h> */
 /* #include <errno.h> */
 /* #include <fcntl.h> */
@@ -36,8 +35,10 @@
 
 
 /* fake our package name */
-typedef CERTCertificate* Crypt__NSS__Certificate;
-typedef CERTCertList* Crypt__NSS__CertList;
+typedef CERTCertificate* NSS__Certificate;
+typedef CERTCertList* NSS__CertList;
+
+char* initstring;
 
 
 //---- Beginning here this is a direct copy from NSS vfychain.c
@@ -129,7 +130,7 @@ SV* item_to_sv(SECItem* item) {
   return newSVpvn((const char*) item->data, item->len);
 }
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS
+MODULE = NSS    PACKAGE = NSS
 
 PROTOTYPES: DISABLE
 
@@ -153,6 +154,7 @@ _init_nodb()
   
   //secStatus = NSS_Initialize("test2", "", "", SECMOD_DB, initFlags);
   secStatus = NSS_NoDB_Init(NULL);
+  initstring = NULL;
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
@@ -166,12 +168,17 @@ _init_db(string)
 
   PREINIT:
   SECStatus secStatus;
-  char* path;  
+  char* path;
+  STRLEN pathlen;
 
   CODE:
-  path = SvPV_nolen(string);
+  path = SvPV(string, pathlen);
 
   secStatus = NSS_InitReadWrite(path);
+  initstring = (char*) malloc(pathlen+1);
+  bzero(initstring, pathlen+1);
+  memcpy(initstring, path, pathlen);
+  
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
@@ -179,12 +186,32 @@ _init_db(string)
     croak("NSS Init failed: %d = %s\n",
                  err, PORT_ErrorToString(err));
   }
+
+
+void 
+__cleanup(void)
+  
+  PREINIT:
+  SECStatus rv;
+  
+  CODE:
+  rv = NSS_Shutdown();
+
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak( "NSS Shutdown failed %d = %s\n",
+	         err, PORT_ErrorToString(err));
+  }
+  //printf("Destroy was happy\n");
   
 
 SV*
 add_cert_to_db(cert, string)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
   SV* string;
+
+  ALIAS:
+  add_trusted_cert_to_db = 1
 
   PREINIT:
   PK11SlotInfo *slot = NULL;
@@ -200,16 +227,21 @@ add_cert_to_db(cert, string)
   defaultDB = CERT_GetDefaultCertDB();
 
   slot = PK11_GetInternalKeySlot();
-  trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
-  if (!trust) {
-    croak("Could not create trust");
-  }
 
-  rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
-  if (rv) {
-    croak("unable to decode trust string");
+  if ( ix == 1 ) {
+    // trusted Certificate
+  
+    trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
+    if (!trust) {
+      croak("Could not create trust");
+    }
+  
+    rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
+    if (rv) {
+      croak("unable to decode trust string");
+    }
   }
-
+  
   rv = PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, nick, PR_FALSE);
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
@@ -217,12 +249,16 @@ add_cert_to_db(cert, string)
 	         err, PORT_ErrorToString(err));
   }
 
-  rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
-  if (rv != SECSuccess) {
-    croak("Could not change cert trust");
+  if ( ix == 1 ) {
+    rv = CERT_ChangeCertTrust(defaultDB, cert, trust);
+    if (rv != SECSuccess) {
+      croak("Could not change cert trust");
+    }
   }
 
-  PORT_Free(trust);
+  PORT_Free(trust); 
+
+  PK11_FreeSlot(slot);
 
   RETVAL = newSViv(1);   
 
@@ -231,15 +267,46 @@ add_cert_to_db(cert, string)
 
 
 void
+_reinit()
+
+  PREINIT:
+  SECStatus rv;
+
+  CODE:
+
+  rv = NSS_Shutdown();
+
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak( "NSS Shutdown failed during reinit. Last error-code: %d = %s\n", err, PORT_ErrorToString(err));
+  }
+
+
+  if ( initstring == NULL ) {
+    rv = NSS_NoDB_Init(NULL);   
+  } else {
+    //printf("%s\n\n", initstring);
+    rv = NSS_InitReadWrite(initstring);
+  }
+    
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak("NSS Init failed: %d = %s\n",                  
+    err, PORT_ErrorToString(err));
+  } 
+    
+  
+
+void
 dump_certificate_cache_info()
 
   CODE:
   nss_DumpCertificateCacheInfo();
   
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::CertList
+MODULE = NSS    PACKAGE = NSS::CertList
 
-Crypt::NSS::CertList
+NSS::CertList
 new(class)
 
   PREINIT:
@@ -255,8 +322,8 @@ new(class)
 
 void
 add(certlist, cert)
-  Crypt::NSS::CertList certlist;
-  Crypt::NSS::Certificate cert;
+  NSS::CertList certlist;
+  NSS::Certificate cert;
 
   CODE:
   CERTCertificate* addcert = CERT_DupCertificate(cert);
@@ -265,7 +332,7 @@ add(certlist, cert)
 
 void 
 DESTROY(certlist)
-  Crypt::NSS::CertList certlist;
+  NSS::CertList certlist;
 
   PPCODE:
 
@@ -275,11 +342,11 @@ DESTROY(certlist)
   }
 
 
-MODULE = Crypt::NSS    PACKAGE = Crypt::NSS::Certificate
+MODULE = NSS    PACKAGE = NSS::Certificate
 
 SV*
 accessor(cert)
-  Crypt::NSS::Certificate cert  
+  NSS::Certificate cert  
 
   ALIAS:
   subject = 1
@@ -394,11 +461,13 @@ accessor(cert)
   RETVAL
 
 SV*
-old_verify(cert)
-  Crypt::NSS::Certificate cert;
+verify_certificate(cert, timedouble = NO_INIT)
+  NSS::Certificate cert;
+  SV* timedouble;
 
   ALIAS:
-  old_verify_pkix = 1
+  verify_certificate_pkix = 1
+  verify_cert = 2
 
   PREINIT:
   SECStatus secStatus;
@@ -409,8 +478,14 @@ old_verify(cert)
   CODE:
   defaultDB = CERT_GetDefaultCertDB();
 
-  if (!time)
+  if ( items == 1 ) {
     time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }
 
   if ( ix == 1 ) 
     CERT_SetUsePKIXForValidation(PR_TRUE);
@@ -420,18 +495,29 @@ old_verify(cert)
   log.head = log.tail = NULL;
   log.count = 0;
 
+  if ( ix == 2 ) {
+
+  secStatus = CERT_VerifyCert(defaultDB, cert,
+                                     PR_TRUE, // check sig 
+				     certUsageSSLServer,
+				     time,
+				     NULL,
+				     NULL);
+  } else {
+
   secStatus = CERT_VerifyCertificate(defaultDB, cert,
                                      PR_TRUE, // check sig 
 				     certificateUsageSSLServer,
 				     time,
 				     NULL,
 				     &log, NULL);
+   }
 
 
   if (secStatus != SECSuccess ) {
-    RETVAL = &PL_sv_no;
+    RETVAL = newSViv(PR_GetError()); // return error code
   } else {
-    RETVAL = &PL_sv_yes;
+    RETVAL = newSViv(1); // return 1 on success
   }  
 
   for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
@@ -445,7 +531,7 @@ old_verify(cert)
   RETVAL
 
 SV* match_name(cert, string)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
   SV* string;
 
   PREINIT:
@@ -467,9 +553,10 @@ SV* match_name(cert, string)
   RETVAL
 
 SV*
-verify(cert, trustedCertList = NO_INIT)
-  Crypt::NSS::Certificate cert;
-  Crypt::NSS::CertList trustedCertList;
+verify_pkix(cert, timedouble = NO_INIT, trustedCertList = NO_INIT)
+  NSS::Certificate cert;
+  SV* timedouble;
+  NSS::CertList trustedCertList;
 
   PREINIT:
   SECStatus secStatus;
@@ -501,7 +588,17 @@ verify(cert, trustedCertList = NO_INIT)
   cvin[inParamIndex].value.pointer.revocation = &rev;
   inParamIndex++;
 
-  if ( items == 2 ) {
+  if ( items >= 2 ) {
+    PRTime time;
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+    cvin[inParamIndex].type = cert_pi_date;
+    cvin[inParamIndex].value.scalar.time = time;
+    inParamIndex++;
+  }
+  if ( items == 3 ) {
     // we have a trustedCertList
     cvin[inParamIndex].type = cert_pi_trustAnchors;
     cvin[inParamIndex].value.pointer.chain = trustedCertList;
@@ -528,7 +625,7 @@ verify(cert, trustedCertList = NO_INIT)
   
 
   if (secStatus != SECSuccess ) {
-    RETVAL = &PL_sv_no;
+    RETVAL = newSViv(PR_GetError()); // return error code
   } else { 
     /* CERTCertificate* issuerCert = cvout[0].value.pointer.cert;
     CERTCertList* builtChain = cvout[1].value.pointer.chain;    
@@ -536,7 +633,7 @@ verify(cert, trustedCertList = NO_INIT)
     CERT_DestroyCertList(builtChain);
     CERT_DestroyCertificate(issuerCert); */
    
-    RETVAL = &PL_sv_yes;
+    RETVAL = newSViv(1);
   }  
     
   // destroy refs in the log 
@@ -550,7 +647,7 @@ verify(cert, trustedCertList = NO_INIT)
   OUTPUT: 
   RETVAL
 
-Crypt::NSS::Certificate
+NSS::Certificate
 new(class, string)
   SV  *string
 
@@ -590,11 +687,15 @@ new(class, string)
 
 
 void DESTROY(cert)
-  Crypt::NSS::Certificate cert;
+  NSS::Certificate cert;
 
   PPCODE:
 
   if ( cert ) {
+    if ( cert->nssCertificate ) {
+	//printf("Is nsscertificate\n");
+	//printf("Refcount: %d\n", cert->nssCertificate->object.refCount);
+    }
     //printf("Certificate %s destroyed\n", cert->subjectName);
     CERT_DestroyCertificate(cert);
     cert = 0;

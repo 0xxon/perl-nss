@@ -1,4 +1,4 @@
-package Crypt::NSS;
+package NSS;
 
 use strict;
 
@@ -38,9 +38,9 @@ sub load_rootlist {
 
 			if ( $line =~ /--END CERTIFICATE--/ ) {
 				#say "|$pem|";
-				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
+				my $cert = NSS::Certificate->new_from_pem($pem);
 				$pem = "";
-				add_cert_to_db($cert, $cert->subject);
+				add_trusted_cert_to_db($cert, $cert->subject);
 			}
 		}
 	}
@@ -75,12 +75,16 @@ sub import {
 	}
 }
 
-package Crypt::NSS::CertList;
+END {
+  __PACKAGE__->__cleanup;
+}
+
+package NSS::CertList;
 
 sub new_from_rootlist {
 	my ($class, $filename) = @_;
 
-	my $certlist = Crypt::NSS::CertList->new();
+	my $certlist = NSS::CertList->new();
 
 	my $pem;
 
@@ -92,7 +96,7 @@ sub new_from_rootlist {
 
 			if ( $line =~ /--END CERTIFICATE--/ ) {
 				#say "|$pem|";
-				my $cert = Crypt::NSS::Certificate->new_from_pem($pem);
+				my $cert = NSS::Certificate->new_from_pem($pem);
 				$pem = "";
 				$certlist->add($cert);
 			}
@@ -104,7 +108,7 @@ sub new_from_rootlist {
 	return $certlist;
 }
 
-package Crypt::NSS::Certificate;
+package NSS::Certificate;
 use MIME::Base64 ();
 
 sub serial {
@@ -132,13 +136,13 @@ __END__
 
 =head1 NAME
 
-Crypt::NSS - Perl interface for the certificate handling parts of the NSS api.
+NSS - Perl interface for the certificate handling parts of the NSS api.
 
 =head1 SYNOPSIS
 
-  use Crypt::NSS;
+  use NSS;
 
-  my $cert = Crypt::NSS::Certificate->new($der);
+  my $cert = NSS::Certificate->new($der);
 
   print $x509->subject() . "\n";
   print $x509->issuer() . "\n";
@@ -148,7 +152,7 @@ Crypt::NSS - Perl interface for the certificate handling parts of the NSS api.
 
 =head1 ABSTRACT
 
-  Crypt::NSS - Perl interface for the certificate handling parts of the NSS api..
+  NSS - Perl interface for the certificate handling parts of the NSS api..
 
 =head1 DESCRIPTION
 

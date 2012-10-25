@@ -1,6 +1,6 @@
 use inc::Module::Install;
 
-name('Crypt-NSS');
+name('NSS');
 license('lgpl');
 perl_version('5.10.1');
 all_from('NSS.pm');
