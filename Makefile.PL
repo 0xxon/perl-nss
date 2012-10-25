@@ -14,7 +14,7 @@ cc_inc_paths('/opt/local/include', '/opt/local/include/nss', '/opt/local/include
 
 libs [ '-L/opt/local/lib/nspr', '-L/home/bernhard/nss/lib -L/opt/local/lib/nss -lnss3' ];
 
-cc_optimize_flags('-O2 -g -Wall -Werror -std=c99');
+cc_optimize_flags('-O2 -g -Wall -std=c99');
 
 auto_install();
 WriteAll();
