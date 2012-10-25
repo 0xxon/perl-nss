@@ -184,7 +184,8 @@ BOOT:
   {"certUsageVerifyCA", certUsageVerifyCA},
   {"certUsageProtectedObjectSigner", certUsageProtectedObjectSigner},
   {"certUsageStatusResponder",  certUsageStatusResponder},
-  {"certUsageAnyCA",  certUsageAnyCA}
+  {"certUsageAnyCA",  certUsageAnyCA},
+  {Nullch,0}
   };
 
   char *name;
