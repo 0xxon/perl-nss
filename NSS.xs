@@ -622,9 +622,10 @@ accessor(cert)
 
 
 SV*
-verify_mozilla(cert, timedouble = NO_INIT)
+verify_mozilla(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   NSS::Certificate cert;
   SV* timedouble;
+  I32 usage;
 
   PREINIT:
   SECStatus rv;
@@ -685,7 +686,7 @@ verify_mozilla(cert, timedouble = NO_INIT)
 
   rv = CERT_VerifyCert(defaultDB, cert,
                                      PR_TRUE, // check sig 
-				     certUsageSSLServer,
+				     usage,
 				     time,
 				     NULL,
 				     NULL);

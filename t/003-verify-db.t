@@ -2,14 +2,14 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>46;
+use Test::More tests=>52;
 
 use File::Temp;
 
 my $dbdir;
 
 my $vfytime = 1351057173; # time at which certificates were valid
-my $invalidtime = 42; # well, certainly not valid here.
+my $invalidtime = 52; # well, certainly not valid here.
 
 BEGIN { 
 	# use a temporary directory for our database...
