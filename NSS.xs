@@ -502,6 +502,32 @@ add(certlist, cert)
   CERT_AddCertToListTail(certlist, addcert);
 
 
+void
+dump(certlist)
+  NSS::CertList certlist;
+
+  PREINIT:
+  CERTCertListNode *node;
+
+  PPCODE:
+
+  node = CERT_LIST_HEAD(certlist);
+
+  while ( !CERT_LIST_END(node, certlist) ) {
+    if ( node->cert ) {
+      CERTCertificate* currcert = CERT_DupCertificate(node->cert);
+      SV* cert = newSV(0);
+
+      sv_setref_pv(cert, "NSS::Certificate", currcert); // the beauty of this is that it should be cleaned by perl refcounting now
+      mXPUSHs(cert);
+    } else {
+      croak("Bad certificate list, encountered node without cert.");
+    }
+
+    node = CERT_LIST_NEXT(node);
+  }
+
+
 void 
 DESTROY(certlist)
   NSS::CertList certlist;
@@ -957,6 +983,39 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   }
 
   PORT_FreeArena(log.arena, PR_FALSE);
+
+  OUTPUT: 
+  RETVAL
+
+
+NSS::CertList
+get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer) 
+  NSS::Certificate cert;
+  I32 usage;  
+  SV* timedouble;
+
+  PREINIT:
+  CERTCertList* list = NULL;
+  PRTime time;
+
+  CODE:
+
+  if ( items == 1 || SvIV(timedouble) == 0 ) {
+    time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }  
+
+  list = CERT_GetCertChainFromCert(cert, time, usage);
+
+  if ( list == NULL ) {
+    XSRETURN_UNDEF;
+  }
+
+  RETVAL = list;
 
   OUTPUT: 
   RETVAL
