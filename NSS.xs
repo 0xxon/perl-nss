@@ -415,6 +415,7 @@ accessor(cert)
   notAfter = 6
   version = 8
   subj_alt_name = 9
+  common_name = 10
 
   PREINIT:
 
@@ -426,6 +427,10 @@ accessor(cert)
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
     RETVAL = item_to_sv(&cert->serialNumber);
+  } else if ( ix == 10 ) {
+    char * cn = CERT_GetCommonName(&cert->subject);
+    RETVAL = newSVpvf("%s", cn);
+    PORT_Free(cn);
   } else if ( ix == 5 || ix == 6 ) {
     int64 time;
     SECStatus rv;

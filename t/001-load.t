@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>9;
+use Test::More tests=>10;
 
 BEGIN { use_ok( 'NSS' ); }
 
@@ -17,6 +17,7 @@ is($cert->serial, '009863c9c6d7bd0ee5', 'serial');
 is($cert->notBefore, 'Mon Oct 15 22:23:31 2012', 'notBefore');
 is($cert->notAfter, 'Tue Oct 15 22:23:31 2013', 'notAfter');
 ok(!$cert->subj_alt_name, 'no alt name');
+is($cert->common_name, "Test Certificate", 'Test Certificate');
 
 sub slurp {
   local $/=undef;
