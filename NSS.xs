@@ -416,6 +416,7 @@ accessor(cert)
   version = 8
   subj_alt_name = 9
   common_name = 10
+  is_root = 11
 
   PREINIT:
 
@@ -431,6 +432,12 @@ accessor(cert)
     char * cn = CERT_GetCommonName(&cert->subject);
     RETVAL = newSVpvf("%s", cn);
     PORT_Free(cn);
+  } else if ( ix == 11 ) {
+    if ( cert->isRoot == PR_TRUE ) {
+      XSRETURN_YES;
+    } else {
+      XSRETURN_NO;
+    }
   } else if ( ix == 5 || ix == 6 ) {
     int64 time;
     SECStatus rv;
