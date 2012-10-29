@@ -466,9 +466,7 @@ accessor(cert)
       	&subAltName);
 
     if (rv != SECSuccess) {
-    	//printf("No alt name!\n");
-        RETVAL = &PL_sv_no;
-        return;
+    	XSRETURN_NO;
     } 
     
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
