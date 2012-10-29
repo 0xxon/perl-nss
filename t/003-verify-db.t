@@ -7,6 +7,7 @@ use Test::More tests=>44;
 use File::Temp;
 
 my $dbdir;
+use Data::Dumper;
 
 my $vfytime = 1351057173; # time at which certificates were valid
 my $invalidtime = 42; # well, certainly not valid here.
@@ -68,6 +69,17 @@ NSS->load_rootlist('certs/root.ca');
 		is($google->verify_cert($vfytime), 1, 'verify with added thawte');
 		is($google->verify_certificate($vfytime), 1, 'verify with added thawte');
 		is($google->verify_certificate_pkix($vfytime), 1, 'verify with added thawte');
+
+		my @want = ( 
+			'CN=www.google.com,O=Google Inc,L=Mountain View,ST=California,C=US',
+			'CN=Thawte SGC CA,O=Thawte Consulting (Pty) Ltd.,C=ZA',
+			'OU=Class 3 Public Primary Certification Authority,O="VeriSign, Inc.",C=US'
+	  	);
+
+		# chain resolution test
+		my @out = $google->get_cert_chain_from_cert($vfytime)->dump;
+		my @subjects = map { $_->subject } @out;
+		is_deeply(\@subjects, \@want, 'Chain resolution');
 	}
 }
 
