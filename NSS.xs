@@ -64,7 +64,7 @@ typedef struct RevMethodsStruct {
 
 RevMethods revMethodsData[REV_METHOD_INDEX_MAX];
 
-SECStatus
+static SECStatus
 configureRevocationParams(CERTRevocationFlags *flags)
 {
    int i;
@@ -106,7 +106,7 @@ configureRevocationParams(CERTRevocationFlags *flags)
 
 //---- end direct copy from vfychain.c
 
-PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
+static PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
   switch(usage) {
     case certUsageSSLClient:
       return certificateUsageSSLClient;
@@ -137,9 +137,22 @@ PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
   }
 }
     
-	
+static HV* node_to_hv(CERTVerifyLogNode* node) {
+  HV* out = newHV();
 
-SECStatus sv_to_item(SV* certSv, SECItem* dst) {
+  hv_stores(out, "depth", newSVuv(node->depth)) ? : croak("Could not store data in hv");
+  hv_stores(out, "error", newSViv(node->error)) ? : croak("Could not store data in hv");
+  if ( node->cert ) {
+    SV* cert = newSV(0);
+
+    sv_setref_pv(cert, "NSS::Certificate", node->cert); // the beauty of this is that it should be cleaned by perl refcounting now
+    hv_stores(out, "certificate", cert)  ? : croak("Could not store data in hv");
+  }
+
+  return out;
+}
+
+static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
   char *cert;
 
@@ -159,7 +172,7 @@ SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   return SECSuccess;
 }
 
-SV* item_to_sv(SECItem* item) {
+static SV* item_to_sv(SECItem* item) {
   return newSVpvn((const char*) item->data, item->len);
 }
 
@@ -259,7 +272,7 @@ __cleanup(void)
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak( "NSS Shutdown failed %d = %s\n",
-	         err, PORT_ErrorToString(err));
+           err, PORT_ErrorToString(err));
   }
   //printf("Destroy was happy\n");
   
@@ -305,7 +318,7 @@ add_cert_to_db(cert, string)
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak( "could not add certificate to db %d = %s\n",
-	         err, PORT_ErrorToString(err));
+           err, PORT_ErrorToString(err));
   }
 
   if ( ix == 1 ) {
@@ -445,9 +458,9 @@ accessor(cert)
     PRExplodedTime printableTime; 
 
     if ( ix == 5 ) 
-    	rv = DER_UTCTimeToTime(&time, &cert->validity.notBefore);
+      rv = DER_UTCTimeToTime(&time, &cert->validity.notBefore);
     else if ( ix == 6 )    
-	rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
+  rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
     else
         croak("not possible");
 
@@ -475,10 +488,10 @@ accessor(cert)
     SV* out = newSVpvn("", 0);
     
     rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, 
-      	&subAltName);
+        &subAltName);
 
     if (rv != SECSuccess) {
-    	XSRETURN_NO;
+      XSRETURN_NO;
     } 
     
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -490,34 +503,34 @@ accessor(cert)
       croak("No namelist");
 
     do {
-	switch (current->type) {
-	case certDNSName:
+  switch (current->type) {
+  case certDNSName:
             {
             sv_catpv(out, "DNS:");
-	    sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
             sv_catpv(out, ",");
-	    break;
+      break;
             }
-	case certIPAddress:
-	    sv_catpv(out, "IP:");
-	    sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+  case certIPAddress:
+      sv_catpv(out, "IP:");
+      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
             sv_catpv(out, ",");
-	    break;
-	default:
-	    sv_catpv(out, "UnknownElement,");
-	    break;
-	}
-	current = CERT_GetNextGeneralName(current);
+      break;
+  default:
+      sv_catpv(out, "UnknownElement,");
+      break;
+  }
+  current = CERT_GetNextGeneralName(current);
     } while (current != nameList);
     
     RETVAL = out;
 
     if (arena) {
-	PORT_FreeArena(arena, PR_FALSE);
+  PORT_FreeArena(arena, PR_FALSE);
     }
 
     if (subAltName.data) {
-	SECITEM_FreeItem(&subAltName, PR_FALSE);
+  SECITEM_FreeItem(&subAltName, PR_FALSE);
     }
 
 
@@ -538,6 +551,9 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   ALIAS:
   verify_certificate_pkix = 1
   verify_cert = 2
+  verify_certificate_log = 3
+  verify_certificate_pkix_log = 4
+  verify_cert_log = 5
 
   PREINIT:
   SECStatus secStatus;
@@ -557,42 +573,54 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
     LL_D2L(time, tmptime); // and convert to 64-bit int
   }
 
-  if ( ix == 1 ) 
+  if ( ix == 1 || ix == 4 ) 
     CERT_SetUsePKIXForValidation(PR_TRUE);
 
-  // Initialize log
   log.arena = PORT_NewArena(512);
   log.head = log.tail = NULL;
   log.count = 0;
 
   if ( ix == 2 ) {
-
-  secStatus = CERT_VerifyCert(defaultDB, cert,
-                                     PR_TRUE, // check sig 
-				     usage,
-				     time,
-				     NULL,
-				     NULL);
+    secStatus = CERT_VerifyCert(defaultDB, cert,
+               PR_TRUE, // check sig 
+               usage,
+               time,
+               NULL,
+               NULL);
+  } else if ( ix == 5) { // supplying log changes the return value
+    secStatus = CERT_VerifyCert(defaultDB, cert,
+               PR_TRUE, // check sig 
+               usage,
+               time,
+               NULL,
+               &log);
   } else {
+    secStatus = CERT_VerifyCertificate(defaultDB, cert,
+               PR_TRUE, // check sig 
+               cert_usage_to_certificate_usage(usage),
+               time,
+               NULL,
+               &log, NULL);
+  }
 
-  secStatus = CERT_VerifyCertificate(defaultDB, cert,
-                                     PR_TRUE, // check sig 
-				     cert_usage_to_certificate_usage(usage),
-				     time,
-				     NULL,
-				     &log, NULL);
-   }
 
+  if ( ix <= 2 ) { // no log
+    if (secStatus != SECSuccess ) {
+      RETVAL = newSViv(PR_GetError()); // return error code
+    } else {
+      RETVAL = newSViv(1); // return 1 on success
+    }  
 
-  if (secStatus != SECSuccess ) {
-    RETVAL = newSViv(PR_GetError()); // return error code
+    for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
+      if (node->cert)
+        CERT_DestroyCertificate(node->cert);
+    }
   } else {
-    RETVAL = newSViv(1); // return 1 on success
-  }  
-
-  for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
-    if (node->cert)
-      CERT_DestroyCertificate(node->cert);
+    for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
+      HV* out = node_to_hv(node);
+      //sv_2mortal((SV*) out);
+      RETVAL = newRV_noinc((SV*) out);
+    }
   }
   
   PORT_FreeArena(log.arena, PR_FALSE);
@@ -741,13 +769,13 @@ new(class, string)
   cert = CERT_NewTempCertificate(defaultDB, &item, 
                                    NULL     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
-				   PR_TRUE  /* copyDER */);
+           PR_TRUE  /* copyDER */);
 
   
   if (!cert) {
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",
-	         err, PORT_ErrorToString(err));
+           err, PORT_ErrorToString(err));
   }
   PORT_Free(item.data);
 
@@ -764,8 +792,8 @@ void DESTROY(cert)
 
   if ( cert ) {
     if ( cert->nssCertificate ) {
-	//printf("Is nsscertificate\n");
-	//printf("Refcount: %d\n", cert->nssCertificate->object.refCount);
+  //printf("Is nsscertificate\n");
+  //printf("Refcount: %d\n", cert->nssCertificate->object.refCount);
     }
     //printf("Certificate %s destroyed\n", cert->subjectName);
     CERT_DestroyCertificate(cert);
