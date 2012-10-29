@@ -664,9 +664,7 @@ verify_mozilla(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
       if (server_cert_comparison_len == locked_cert_comparison_len &&
           !memcmp(server_cert_comparison_start, locked_cert_comparison_start, locked_cert_comparison_len)) {
         PR_SetError(SEC_ERROR_REVOKED_CERTIFICATE, 0);
-    	RETVAL = &PL_sv_no;
-	return;
-        //return SECFailure;
+	XSRETURN_IV(SEC_ERROR_REVOKED_CERTIFICATE);
       }
     }
   }
