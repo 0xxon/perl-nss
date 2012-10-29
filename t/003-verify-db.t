@@ -47,7 +47,7 @@ NSS->load_rootlist('certs/root.ca');
 	is($rapidssl->verify_pkix($invalidtime), -8181, 'no verify');
 	is($rapidssl->verify_cert($invalidtime), -8181, 'no verify');
 	# Fun. Those apparently try chain resolution before date checking
-	is($rapidssl->verify_certificate($invalidtime), -8179, 'no verify');
+	is($rapidssl->verify_certificate($invalidtime), -8162, 'no verify');
 	is($rapidssl->verify_certificate_pkix($invalidtime), -8179, 'no verify');
 	is($rapidssl->verify_mozilla($invalidtime), -8181,'no verify');
 }

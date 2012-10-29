@@ -811,6 +811,9 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
 
   if ( ix == 1 || ix == 4 ) 
     CERT_SetUsePKIXForValidation(PR_TRUE);
+  else 
+    CERT_SetUsePKIXForValidation(PR_FALSE);
+
 
   log.arena = PORT_NewArena(512);
   log.head = log.tail = NULL;
