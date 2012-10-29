@@ -542,7 +542,7 @@ accessor(cert)
   OUTPUT:
   RETVAL
 
-SV*
+void
 verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   NSS::Certificate cert;
   SV* timedouble;
@@ -561,7 +561,7 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   CERTVerifyLog log;
   CERTCertDBHandle *defaultDB;
 
-  CODE:
+  PPCODE:
   defaultDB = CERT_GetDefaultCertDB();
 
   if ( items == 1 || SvIV(timedouble) == 0 ) {
@@ -605,28 +605,33 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
 
 
   if ( ix <= 2 ) { // no log
-    if (secStatus != SECSuccess ) {
-      RETVAL = newSViv(PR_GetError()); // return error code
-    } else {
-      RETVAL = newSViv(1); // return 1 on success
-    }  
-
     for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
       if (node->cert)
         CERT_DestroyCertificate(node->cert);
     }
+
+    PORT_FreeArena(log.arena, PR_FALSE);
+
+    if (secStatus != SECSuccess ) {
+      ST(0) = newSViv(PR_GetError());
+    } else {
+      ST(0) = newSViv(1); // return 1 on success
+    }  
+
+    sv_2mortal(ST(0));
+    XSRETURN(1);
+
   } else {
     for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
       HV* out = node_to_hv(node);
-      //sv_2mortal((SV*) out);
-      RETVAL = newRV_noinc((SV*) out);
+      SV* rv = newRV_noinc((SV*) out);
+      mXPUSHs(rv);
     }
+    
+    PORT_FreeArena(log.arena, PR_FALSE);
+
   }
   
-  PORT_FreeArena(log.arena, PR_FALSE);
-
-  OUTPUT:
-  RETVAL
 
 SV* match_name(cert, string)
   NSS::Certificate cert;
