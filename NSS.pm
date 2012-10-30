@@ -9,6 +9,7 @@ use Exporter;
 use base qw(Exporter);
 
 use autodie qw(open close);
+use Carp;
 
 $VERSION = '0.1';
 
@@ -26,7 +27,10 @@ BOOT_XS: {
 }
 
 sub load_rootlist {
-	my ($class, $filename) = @_;
+	shift if ( defined $_[0] && $_[0] eq __PACKAGE__ );
+	my $filename = shift;
+
+	carp("No rootlist filename provided") unless defined($filename);
 
 	my $pem;
 
