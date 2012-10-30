@@ -1,0 +1,48 @@
+=head1 NAME
+
+NSS - Perl interface for the certificate handling parts of the NSS api.
+
+=head1 SYNOPSIS
+
+  use NSS;
+
+  my $cert = NSS::Certificate->new($der);
+
+  print $cert->subject() . "\n";
+  print $cert->issuer() . "\n";
+
+  my $valid = $cert->validate_cert();
+
+
+=head1 ABSTRACT
+
+  NSS - Perl interface for the certificate handling parts of the NSS api..
+
+=head1 DESCRIPTION
+
+=head2 EXPORT
+
+None.
+
+=head1 FUNCTIONS
+
+=head1 SEE ALSO
+
+OpenSSL(1), Crypt::X509
+
+=head1 AUTHOR
+
+Johanna Amann, E<lt>johanna@icir.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2012 by Johanna Amann
+
+This library is free software and licensed under the GNU LGPL, version 2.1
+as available at http://www.gnu.org/licenses/lgpl-2.1.html.
+
+The library contains source code of the Mozilla Network Security Services; for
+NSS license information please see http://www.mozilla.org/projects/security/pki/nss/.
+
+=cut
+
