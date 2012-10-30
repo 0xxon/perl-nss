@@ -18,6 +18,7 @@
 #include "secder.h"
 #include "cert.h"
 #include "ocsp.h"
+#include "portreg.h"
 
 /* #include <stdlib.h> */
 /* #include <errno.h> */
@@ -367,6 +368,70 @@ _reinit()
     err, PORT_ErrorToString(err));
   } 
     
+
+void
+test_host_name(cnsn, hnsn)
+  SV* cnsn;
+  SV* hnsn;
+
+  PREINIT:
+  char* cn;
+  char* hn;
+
+  CODE:
+
+  cn = SvPV_nolen(cnsn);
+  hn = SvPV_nolen(hnsn);
+
+    static int useShellExp = -1;
+
+    if (useShellExp < 0) {
+        useShellExp = (NULL != PR_GetEnv("NSS_USE_SHEXP_IN_CERT_NAME"));
+    }
+    if (useShellExp) {
+    	/* Backward compatible code, uses Shell Expressions (SHEXP). */
+	int regvalid = PORT_RegExpValid(cn);
+	if (regvalid != NON_SXP) {
+	    /* cn is a regular expression, try to match the shexp */
+	    int match = PORT_RegExpCaseSearch(hn, cn);
+
+	    if ( match == 0 ) {
+        XSRETURN_YES;
+	    } else {
+        XSRETURN_NO;
+	    }
+	}
+    } else {
+	/* New approach conforms to RFC 2818. */
+	char *wildcard    = PORT_Strchr(cn, '*');
+	char *firstcndot  = PORT_Strchr(cn, '.');
+	char *secondcndot = firstcndot ? PORT_Strchr(firstcndot+1, '.') : NULL;
+	char *firsthndot  = PORT_Strchr(hn, '.');
+
+	/* For a cn pattern to be considered valid, the wildcard character...
+	 * - may occur only in a DNS name with at least 3 components, and
+	 * - may occur only as last character in the first component, and
+	 * - may be preceded by additional characters
+	 */
+	if (wildcard && secondcndot && secondcndot[1] && firsthndot 
+	    && firstcndot  - wildcard  == 1
+	    && secondcndot - firstcndot > 1
+	    && PORT_Strrchr(cn, '*') == wildcard
+	    && !PORT_Strncasecmp(cn, hn, wildcard - cn)
+	    && !PORT_Strcasecmp(firstcndot, firsthndot)) {
+	    /* valid wildcard pattern match */
+        XSRETURN_YES;
+	}
+    }
+    /* String cn has no wildcard or shell expression.  
+     * Compare entire string hn with cert name. 
+     */
+    if (PORT_Strcasecmp(hn, cn) == 0) {
+        XSRETURN_YES;
+    }
+
+        XSRETURN_NO;
+
   
 
 void
