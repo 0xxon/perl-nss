@@ -56,6 +56,7 @@ sub import {
 	my $pkg = shift; # us
         my @syms = (); # symbols to import. really should be empty
         my @dbpath = (); 
+	my $noinit = 0;
 
         my $dest = \@syms;
 
@@ -64,11 +65,17 @@ sub import {
                         # switch to dbpath 
                         $dest = \@dbpath;
                         next;           
-                }
+                } elsif ( $_ eq ':noinit' ) {
+			$noinit = 1;
+			next;
+		}
+
                 push (@$dest, $_);
         }
         
         die ("We do not export symbols") unless (scalar @syms == 0);	
+
+	return if ( $noinit );
 
 	if ( scalar @dbpath == 0 ) {
 		_init_nodb();
