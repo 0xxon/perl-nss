@@ -628,19 +628,26 @@ accessor(cert)
     if(!current)
       croak("No namelist");
 
+    bool first = true;
     do {
   switch (current->type) {
   case certDNSName:
             {
+            if ( !first ) 
+		sv_catpv(out, ",");
+	    else 
+		first = false;
             sv_catpv(out, "DNS:");
       sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
-            sv_catpv(out, ",");
       break;
             }
   case certIPAddress:
+	    if ( !first ) 
+            	sv_catpv(out, ",");
+	    else
+		first = false;
       sv_catpv(out, "IP:");
       sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
-            sv_catpv(out, ",");
       break;
   default:
       sv_catpv(out, "UnknownElement,");
