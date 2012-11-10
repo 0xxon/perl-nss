@@ -832,6 +832,8 @@ accessor(cert)
     RETVAL = item_to_sv(&cert->serialNumber);
   } else if ( ix == 7 ) {
     char * ce = CERT_GetCertificateEmailAddress(cert);
+    if ( ce == NULL ) 
+      XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", ce);
     PORT_Free(ce);
   } else if ( ix == 10 ) {
