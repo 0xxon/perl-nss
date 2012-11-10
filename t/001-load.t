@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>21;
+use Test::More tests=>22;
 
 BEGIN { use_ok( 'NSS' ); }
 
@@ -35,6 +35,7 @@ BEGIN { use_ok( 'NSS' ); }
 	is($cert->notAfter, 'Mon Sep 30 23:59:59 2013', 'notAfter');
 	ok(!$cert->subj_alt_name, 'no alt name');
 	is($cert->common_name, "www.google.com", 'Test Certificate');
+	is($cert->sig_alg_name, "SHA1WithRSA", 'Test Certificate');
 	ok(!$cert->is_root, 'not selfsigned');
 }
 
