@@ -819,6 +819,7 @@ accessor(cert)
   common_name = 10
   is_root = 11
   sig_alg_name = 12
+  key_alg_name = 13
 
   PREINIT:
 
@@ -848,6 +849,8 @@ accessor(cert)
     }
   } else if ( ix == 12 ) {
     RETVAL = OidToSV(&cert->signature.algorithm);
+  } else if ( ix == 13 ) {
+    RETVAL = OidToSV(&cert->subjectPublicKeyInfo.algorithm.algorithm);
   } else if ( ix == 5 || ix == 6 ) {
     int64 time;
     SECStatus rv;

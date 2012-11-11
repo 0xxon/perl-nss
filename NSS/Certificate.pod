@@ -103,6 +103,10 @@ certificate and false otherwise.
 
 Returns the name of the signature algorithm.
 
+=item key_alg_name
+
+Returns the name of the encryption algorithm.
+
 =back
 
 =head2 VERIFICATION FUNCTIONS
