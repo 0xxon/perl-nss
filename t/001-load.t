@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>25;
+use Test::More tests=>27;
 
 BEGIN { use_ok( 'NSS' ); }
 
@@ -21,6 +21,7 @@ BEGIN { use_ok( 'NSS' ); }
 	is($cert->common_name, "Test Certificate", 'Test Certificate');
 	is($cert->sig_alg_name, "SHA1WithRSA", 'SHA1WithRSA');
 	is($cert->key_alg_name, "RSAEncr", 'RSAEncr');
+	ok($cert->bit_length == 1024, 'bit_length == 1024');
 	ok($cert->is_root, 'selfsigned');
 }
 
@@ -39,6 +40,7 @@ BEGIN { use_ok( 'NSS' ); }
 	is($cert->common_name, "www.google.com", 'Test Certificate');
 	is($cert->sig_alg_name, "SHA1WithRSA", 'SHA1WithRSA');
 	is($cert->key_alg_name, "RSAEncr", 'RSAEncr');
+	ok($cert->bit_length == 1024, 'bit_length == 1024');
 	ok(!$cert->is_root, 'not selfsigned');
 }
 

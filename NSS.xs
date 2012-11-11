@@ -18,6 +18,7 @@
 #include "secder.h"
 #include "cert.h"
 #include "ocsp.h"
+#include "keyhi.h"
 
 /* #include <stdlib.h> */
 /* #include <errno.h> */
@@ -802,6 +803,41 @@ DESTROY(certlist)
 
 
 MODULE = NSS    PACKAGE = NSS::Certificate
+
+SV*
+bit_length(cert)
+  NSS::Certificate cert
+
+  PREINIT:
+  SECKEYPublicKey *key;
+
+  CODE:
+  key = SECKEY_ExtractPublicKey(&cert->subjectPublicKeyInfo);
+
+  if ( key ) {
+    switch(key->keyType) {
+    case rsaKey: {
+      RETVAL = newSViv(key->u.rsa.modulus.len * 8);
+
+      break;
+    } 
+    case ecKey: {
+      croak("EC Key");
+      break;
+    }
+    default:
+      croak("Unknown key type %d", key->keyType);
+    }  
+   
+    SECKEY_DestroyPublicKey(key);
+  } else {
+    XSRETURN_UNDEF;
+  }
+
+  OUTPUT:
+  RETVAL
+
+  
 
 SV*
 accessor(cert)
