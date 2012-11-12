@@ -257,6 +257,18 @@ SV* OidToSV(SECItem *oid)
   case SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST:
     out = "AnsiX962ECDsaSignatureWithSha1";
     break;
+  case SEC_OID_ANSIX962_ECDSA_SHA224_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha224";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA256_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha256";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA384_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha384";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha512";
+    break;
   case SEC_OID_RFC1274_UID:
     out = "UserID";
     break;
@@ -447,7 +459,7 @@ SV* OidToSV(SECItem *oid)
   case SEC_OID_SECG_EC_SECT571R1:
     out = "ECsect571r1";
     break;
-  default: 
+  default: {
  /*
     if (oidTag == SEC_OID(MS_CERT_EXT_CERTTYPE)) {
       out = "MSCerttype";
@@ -462,7 +474,13 @@ SV* OidToSV(SECItem *oid)
       break;
     }
     */
-   croak("Unknown oid");
+
+    char* oidchar = CERT_GetOidString(oid);
+    SV* oidstr = newSVpv(oidchar, 0);
+    PR_smprintf_free(oidchar);
+    return oidstr;
+    }
+
   }
 
   return newSVpvf("%s", out);
@@ -513,6 +531,27 @@ static HV* node_to_hv(CERTVerifyLogNode* node) {
 
   return out;
 }
+
+static
+SV* item_to_hex(SECItem *data) {
+  // do it like mozilla - if data <= 4 -> make integger
+  
+  if ( data-> len <=4 ) {
+    int i = DER_GetInteger(data);
+    return newSViv(i);
+  }
+
+  // ok. That was easy. Now let's produce a hex-dump otherwise
+
+  SV* out = newSVpvn("",0); 
+  for ( unsigned int i = 0; i < data->len; i++ ) {
+    sv_catpvf(out, "%02x", data->data[i]);
+  }
+
+  return out;
+}
+  
+    
 
 static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
@@ -807,6 +846,11 @@ MODULE = NSS    PACKAGE = NSS::Certificate
 SV*
 bit_length(cert)
   NSS::Certificate cert
+  
+  ALIAS:
+  modulus = 1
+  public_key = 1
+  exponent = 2
 
   PREINIT:
   SECKEYPublicKey *key;
@@ -817,12 +861,39 @@ bit_length(cert)
   if ( key ) {
     switch(key->keyType) {
     case rsaKey: {
-      RETVAL = newSViv(key->u.rsa.modulus.len * 8);
+
+      if ( ix == 0 ) {
+        RETVAL = newSViv(key->u.rsa.modulus.len * 8);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.rsa.modulus);
+      } else if ( ix == 2 ) {
+        RETVAL = item_to_hex(&key->u.rsa.publicExponent);
+      } else {
+        croak("Internal error");
+      }
 
       break;
     } 
     case ecKey: {
-      croak("EC Key");
+      if ( ix == 0 ) {
+        int len = SECKEY_ECParamsToKeySize(&key->u.ec.DEREncodedParams);
+        RETVAL = newSViv(len);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.ec.publicValue);
+      } else {
+        croak("EC certificates do not have exponent");
+      }
+
+      break;
+    }
+    case dsaKey: {
+      if ( ix == 0 ) {
+        RETVAL = newSViv(key->u.dsa.publicValue.len * 8);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.dsa.publicValue);
+      } else {
+        croak("DSA certificates do not have exponent");
+      }
       break;
     }
     default:
@@ -840,7 +911,7 @@ bit_length(cert)
   
 
 SV*
-accessor(cert)
+ccessor(cert)
   NSS::Certificate cert  
 
   ALIAS:

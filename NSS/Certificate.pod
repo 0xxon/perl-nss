@@ -107,6 +107,20 @@ Returns the name of the signature algorithm.
 
 Returns the name of the encryption algorithm.
 
+=item key_length
+
+Bit length of the certificate key
+
+=item public_key
+
+Hex representation of the public key of the certificate (also available 
+under the name C<modulus>, for historical reasons
+
+=item exponent
+
+RSA exponent of the public key of the certificate. Croaks, if the certificate
+does not contain an RSA key, so check first using C<key_alg_name>.
+
 =back
 
 =head2 VERIFICATION FUNCTIONS
