@@ -843,6 +843,49 @@ DESTROY(certlist)
 
 MODULE = NSS    PACKAGE = NSS::Certificate
 
+
+SV*
+curve(cert)
+  NSS::Certificate cert
+
+  PREINIT:
+  SECKEYPublicKey *key;
+  SECOidTag tag;
+
+  CODE:
+
+  // This function extracts the curve from a NSS Certificate
+  // As you will see, this is one of the moist straightforward
+  // things to do. Totally easy. Everyone can do that. And find
+  // out. Only took like 10 minutes.
+  // Srsly.
+  
+  SECItem oid = { siBuffer, NULL, 0};
+
+  // this is the complicated part
+  key = SECKEY_ExtractPublicKey(&cert->subjectPublicKeyInfo);
+  if ( key->keyType != ecKey ) {
+    SECKEY_DestroyPublicKey(key);
+    croak("Only ec-keys have a curve");
+  }
+
+  // ok, now it gets simple.
+  oid.len = key->u.ec.DEREncodedParams.len - 2;
+  oid.data = key->u.ec.DEREncodedParams.data + 2;
+  if ((key->u.ec.DEREncodedParams.data[0] != SEC_ASN1_OBJECT_ID) ||
+        ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)) { 
+    SECKEY_DestroyPublicKey(key);
+    croak("Unknown EC-key");
+  }
+
+  RETVAL = OidToSV(&oid);
+
+  SECKEY_DestroyPublicKey(key);
+  
+  OUTPUT:
+  RETVAL
+    
+
 SV*
 bit_length(cert)
   NSS::Certificate cert
@@ -869,6 +912,7 @@ bit_length(cert)
       } else if ( ix == 2 ) {
         RETVAL = item_to_hex(&key->u.rsa.publicExponent);
       } else {
+        SECKEY_DestroyPublicKey(key);        
         croak("Internal error");
       }
 
@@ -881,6 +925,7 @@ bit_length(cert)
       } else if ( ix == 1 ) {
         RETVAL = item_to_hex(&key->u.ec.publicValue);
       } else {
+        SECKEY_DestroyPublicKey(key);        
         croak("EC certificates do not have exponent");
       }
 
@@ -892,6 +937,7 @@ bit_length(cert)
       } else if ( ix == 1 ) {
         RETVAL = item_to_hex(&key->u.dsa.publicValue);
       } else {
+        SECKEY_DestroyPublicKey(key);        
         croak("DSA certificates do not have exponent");
       }
       break;
@@ -911,7 +957,7 @@ bit_length(cert)
   
 
 SV*
-ccessor(cert)
+accessor(cert)
   NSS::Certificate cert  
 
   ALIAS:
@@ -931,6 +977,10 @@ ccessor(cert)
   PREINIT:
 
   CODE:
+
+  if ( ix == 0 ) {
+    croak("Do not access accessor");
+  }
 
   if ( ix == 1 ) {
     RETVAL = newSVpvf("%s", cert->subjectName);

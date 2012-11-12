@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>42;
+use Test::More tests=>43;
 
 BEGIN { use_ok( 'NSS' ); }
 
@@ -25,7 +25,7 @@ diag('Selfsigned certificate');
 	is($cert->key_alg_name, "RSAEncr", 'RSAEncr');
 	ok($cert->bit_length == 1024, 'bit_length == 1024');
 	ok($cert->is_root, 'selfsigned');
-        is($cert->modulus, 'b1dc1c65ffd421820ed33d720bbdf740ba09bd146fa795a5fcf3249ea9f7eafc338922b0deaadda3a4a8828fee61bf4498e36b3ad07fe24e6168e3ef3f1c1e825f9a61c06df7978c3ea9d77bb8061d03cc07fe1ab732b497a5584363feb539152eb691ba6f9fcfcbc1de9cacfb6b2ccf24e79b0c730c441e5e88b2f3f9764701', 'modulus');
+	is($cert->modulus, 'b1dc1c65ffd421820ed33d720bbdf740ba09bd146fa795a5fcf3249ea9f7eafc338922b0deaadda3a4a8828fee61bf4498e36b3ad07fe24e6168e3ef3f1c1e825f9a61c06df7978c3ea9d77bb8061d03cc07fe1ab732b497a5584363feb539152eb691ba6f9fcfcbc1de9cacfb6b2ccf24e79b0c730c441e5e88b2f3f9764701', 'modulus');
 	ok($cert->exponent == 65537, 'exponent');
 }
 
@@ -61,6 +61,7 @@ diag('Thawte EC-root certificate');
 	is($cert->key_alg_name, "ECPublicKey", 'ECPublicKey');
 	ok($cert->bit_length == 384, 'bit_length == 384');
 	is($cert->modulus, '04a2d59c827b959df1527887fe8a16bf05e6dfa3024f0d07c60051ba0c02522d22a44239c4fe8feac9c1bed44dff9f7a9ee2b17c9aada786097387d1e79ae37aa5aa6efbbab370c06788a235d4a39ab1fdadc2ef31faa8b9f3fb08c691d1fb2995', 'modulus');
+	is($cert->curve, 'ECsecp384r1', 'ECsecp384r1');
 }
 
 diag('NIST DSA test-certificate');
