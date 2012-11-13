@@ -1090,11 +1090,11 @@ accessor(cert)
     RETVAL = out;
 
     if (arena) {
-  PORT_FreeArena(arena, PR_FALSE);
+      PORT_FreeArena(arena, PR_FALSE);
     }
 
     if (subAltName.data) {
-  SECITEM_FreeItem(&subAltName, PR_FALSE);
+      SECITEM_FreeItem(&subAltName, PR_FALSE);
     }
 
 
@@ -1229,6 +1229,9 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   I32 usage;
   NSS::CertList trustedCertList;
 
+  ALIAS:
+  verify_pkix_aia = 1
+
   PREINIT:
   SECStatus secStatus;
   PRBool certFetching = PR_FALSE; // automatically get AIA certs
@@ -1242,6 +1245,10 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   CERTVerifyLog log;
 
   CODE:
+
+  if ( ix == 1 ) {
+    certFetching = PR_TRUE;
+  }
 
   cvin[inParamIndex].type = cert_pi_useAIACertFetch;
   cvin[inParamIndex].value.scalar.b = certFetching;
