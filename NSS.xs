@@ -19,6 +19,7 @@
 #include "secerr.h"
 #include "cert.h"
 #include "ocsp.h"
+#include "keyhi.h"
 
 /* #include <stdlib.h> */
 /* #include <errno.h> */
@@ -206,6 +207,385 @@ configureRevocationParams(CERTRevocationFlags *flags)
 
 //---- end direct copy from vfychain.c
 
+
+// function more or less ripped from nsNSSCertHelper.cpp, because NSS does apparently
+// not support giving string names for OIDs. I mean, what the heck would you POSSIBLY
+// want to use THAT for?
+
+static
+SV* OidToSV(SECItem *oid)
+{
+  SECOidTag oidTag = SECOID_FindOIDTag(oid);
+  const char* out = 0;
+
+  switch (oidTag) {
+  case SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION:
+    out = "MD2WithRSA";
+    break;
+  case SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION:
+    out = "MD5WithRSA";
+    break;
+  case SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION:
+    out = "SHA1WithRSA";
+    break;
+  case SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION:
+    out = "SHA256WithRSA";
+    break;
+  case SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION:
+    out = "SHA384WithRSA";
+    break;
+  case SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION:
+    out = "SHA512WithRSA";
+    break;
+  case SEC_OID_PKCS1_RSA_ENCRYPTION:
+    out = "RSAEncr";
+    break;
+  case SEC_OID_PKCS1_RSA_PSS_SIGNATURE:
+    out = "RSAPSSSignature";
+    break;
+  case SEC_OID_NS_CERT_EXT_CERT_TYPE:
+    out = "CertType";
+    break;
+  case SEC_OID_NS_CERT_EXT_BASE_URL:
+    out = "NSCertExtBaseUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_REVOCATION_URL:
+    out = "NSCertExtRevocationUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_CA_REVOCATION_URL:
+    out = "NSCertExtCARevocationUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_CERT_RENEWAL_URL:
+    out = "NSCertExtCertRenewalUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_CA_POLICY_URL:
+    out = "NSCertExtCAPolicyUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_SSL_SERVER_NAME:
+    out = "NSCertExtSslServerName";
+    break;
+  case SEC_OID_NS_CERT_EXT_COMMENT:
+    out = "NSCertExtComment";
+    break;
+  case SEC_OID_NS_CERT_EXT_LOST_PASSWORD_URL:
+    out = "NSCertExtLostPasswordUrl";
+    break;
+  case SEC_OID_NS_CERT_EXT_CERT_RENEWAL_TIME:
+    out = "NSCertExtCertRenewalTime";
+    break;
+  case SEC_OID_NETSCAPE_AOLSCREENNAME:
+    out = "NetscapeAolScreenname";
+    break;
+  case SEC_OID_AVA_COUNTRY_NAME:
+    out = "AVACountry";
+    break;
+  case SEC_OID_AVA_COMMON_NAME:
+    out = "AVACN";
+    break;
+  case SEC_OID_AVA_ORGANIZATIONAL_UNIT_NAME:
+    out = "AVAOU";
+    break;
+  case SEC_OID_AVA_ORGANIZATION_NAME:
+    out = "AVAOrg";
+    break;
+  case SEC_OID_AVA_LOCALITY:
+    out = "AVALocality";
+    break;
+  case SEC_OID_AVA_DN_QUALIFIER:
+    out = "AVADN";
+    break;
+  case SEC_OID_AVA_DC:
+    out = "AVADC";
+    break;
+  case SEC_OID_AVA_STATE_OR_PROVINCE:
+    out = "AVAState";
+    break;
+  case SEC_OID_AVA_SURNAME:
+    out = "Surname";
+    break;
+  case SEC_OID_AVA_GIVEN_NAME:
+    out = "GivenName";
+    break;
+  case SEC_OID_X509_SUBJECT_DIRECTORY_ATTR:
+    out = "SubjectDirectoryAttr";
+    break;
+  case SEC_OID_X509_SUBJECT_KEY_ID:
+    out = "SubjectKeyID";
+    break;
+  case SEC_OID_X509_KEY_USAGE:
+    out = "KeyUsage";
+    break;
+  case SEC_OID_X509_SUBJECT_ALT_NAME:
+    out = "SubjectAltName";
+    break;
+  case SEC_OID_X509_ISSUER_ALT_NAME:
+    out = "IssuerAltName";
+    break;
+  case SEC_OID_X509_BASIC_CONSTRAINTS:
+    out = "BasicConstraints";
+    break;
+  case SEC_OID_X509_NAME_CONSTRAINTS:
+    out = "NameConstraints";
+    break;
+  case SEC_OID_X509_CRL_DIST_POINTS:
+    out = "CrlDistPoints";
+    break;
+  case SEC_OID_X509_CERTIFICATE_POLICIES:
+    out = "CertPolicies";
+    break;
+  case SEC_OID_X509_POLICY_MAPPINGS:
+    out = "PolicyMappings";
+    break;
+  case SEC_OID_X509_POLICY_CONSTRAINTS:
+    out = "PolicyConstraints";
+    break;
+  case SEC_OID_X509_AUTH_KEY_ID:
+    out = "AuthKeyID";
+    break;
+  case SEC_OID_X509_EXT_KEY_USAGE:
+    out = "ExtKeyUsage";
+    break;
+  case SEC_OID_X509_AUTH_INFO_ACCESS:
+    out = "AuthInfoAccess";
+    break;
+  case SEC_OID_ANSIX9_DSA_SIGNATURE:
+    out = "AnsiX9DsaSignature";
+    break;
+  case SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST:
+    out = "AnsiX9DsaSignatureWithSha1";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST:
+    out = "AnsiX962ECDsaSignatureWithSha1";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA224_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha224";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA256_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha256";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA384_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha384";
+    break;
+  case SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE:
+    out = "AnsiX962ECDsaSignatureWithSha512";
+    break;
+  case SEC_OID_RFC1274_UID:
+    out = "UserID";
+    break;
+  case SEC_OID_PKCS9_EMAIL_ADDRESS:
+    out = "PK9Email";
+    break;
+  case SEC_OID_ANSIX962_EC_PUBLIC_KEY:
+    out = "ECPublicKey";
+    break;
+  /* ANSI X9.62 named elliptic curves (prime field) */
+  case SEC_OID_ANSIX962_EC_PRIME192V1:
+    /* same as SEC_OID_SECG_EC_SECP192r1 */
+    out = "ECprime192v1";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME192V2:
+    out = "ECprime192v2";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME192V3:
+    out = "ECprime192v3";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME239V1:
+    out = "ECprime239v1";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME239V2:
+    out = "ECprime239v2";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME239V3:
+    out = "ECprime239v3";
+    break;
+  case SEC_OID_ANSIX962_EC_PRIME256V1:
+    /* same as SEC_OID_SECG_EC_SECP256r1 */
+    out = "ECprime256v1";
+    break;
+  /* SECG named elliptic curves (prime field) */
+  case SEC_OID_SECG_EC_SECP112R1:
+    out = "ECsecp112r1";
+    break;
+  case SEC_OID_SECG_EC_SECP112R2:
+    out = "ECsecp112r2";
+    break;
+  case SEC_OID_SECG_EC_SECP128R1:
+    out = "ECsecp128r1";
+    break;
+  case SEC_OID_SECG_EC_SECP128R2:
+    out = "ECsecp128r2";
+    break;
+  case SEC_OID_SECG_EC_SECP160K1:
+    out = "ECsecp160k1";
+    break;
+  case SEC_OID_SECG_EC_SECP160R1:
+    out = "ECsecp160r1";
+    break;
+  case SEC_OID_SECG_EC_SECP160R2:
+    out = "ECsecp160r2";
+    break;
+  case SEC_OID_SECG_EC_SECP192K1:
+    out = "ECsecp192k1";
+    break;
+  case SEC_OID_SECG_EC_SECP224K1:
+    out = "ECsecp224k1";
+    break;
+  case SEC_OID_SECG_EC_SECP224R1:
+    out = "ECsecp224r1";
+    break;
+  case SEC_OID_SECG_EC_SECP256K1:
+    out = "ECsecp256k1";
+    break;
+  case SEC_OID_SECG_EC_SECP384R1:
+    out = "ECsecp384r1";
+    break;
+
+  case SEC_OID_SECG_EC_SECP521R1:
+    out = "ECsecp521r1";
+    break;
+  /* ANSI X9.62 named elliptic curves (characteristic two field) */
+  case SEC_OID_ANSIX962_EC_C2PNB163V1:
+    out = "ECc2pnb163v1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB163V2:
+    out = "ECc2pnb163v2";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB163V3:
+    out = "ECc2pnb163v3";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB176V1:
+    out = "ECc2pnb176v1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB191V1:
+    out = "ECc2tnb191v1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB191V2:
+    out = "ECc2tnb191v2";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB191V3:
+    out = "ECc2tnb191v3";
+    break;
+  case SEC_OID_ANSIX962_EC_C2ONB191V4:
+    out = "ECc2onb191v4";
+    break;
+  case SEC_OID_ANSIX962_EC_C2ONB191V5:
+    out = "ECc2onb191v5";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB208W1:
+    out = "ECc2pnb208w1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB239V1:
+    out = "ECc2tnb239v1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB239V2:
+    out = "ECc2tnb239v2";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB239V3:
+    out = "ECc2tnb239v3";
+    break;
+  case SEC_OID_ANSIX962_EC_C2ONB239V4:
+    out = "ECc2onb239v4";
+    break;
+  case SEC_OID_ANSIX962_EC_C2ONB239V5:
+    out = "ECc2onb239v5";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB272W1:
+    out = "ECc2pnb272w1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB304W1:
+    out = "ECc2pnb304w1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB359V1:
+    out = "ECc2tnb359v1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2PNB368W1:
+    out = "ECc2pnb368w1";
+    break;
+  case SEC_OID_ANSIX962_EC_C2TNB431R1:
+    out = "ECc2tnb431r1";
+    break;
+  /* SECG named elliptic curves (characteristic two field) */
+  case SEC_OID_SECG_EC_SECT113R1:
+    out = "ECsect113r1";
+    break;
+  case SEC_OID_SECG_EC_SECT113R2:
+    out = "ECsect113r2";
+    break;
+  case SEC_OID_SECG_EC_SECT131R1:
+    out = "ECsect131r1";
+    break;
+  case SEC_OID_SECG_EC_SECT131R2:
+    out = "ECsect131r2";
+    break;
+  case SEC_OID_SECG_EC_SECT163K1:
+    out = "ECsect163k1";
+    break;
+  case SEC_OID_SECG_EC_SECT163R1:
+    out = "ECsect163r1";
+    break;
+  case SEC_OID_SECG_EC_SECT163R2:
+    out = "ECsect163r2";
+    break;
+  case SEC_OID_SECG_EC_SECT193R1:
+    out = "ECsect193r1";
+    break;
+  case SEC_OID_SECG_EC_SECT193R2:
+    out = "ECsect193r2";
+    break;
+  case SEC_OID_SECG_EC_SECT233K1:
+    out = "ECsect233k1";
+    break;
+  case SEC_OID_SECG_EC_SECT233R1:
+    out = "ECsect233r1";
+    break;
+  case SEC_OID_SECG_EC_SECT239K1:
+    out = "ECsect239k1";
+    break;
+  case SEC_OID_SECG_EC_SECT283K1:
+    out = "ECsect283k1";
+    break;
+  case SEC_OID_SECG_EC_SECT283R1:
+    out = "ECsect283r1";
+    break;
+  case SEC_OID_SECG_EC_SECT409K1:
+    out = "ECsect409k1";
+    break;
+  case SEC_OID_SECG_EC_SECT409R1:
+    out = "ECsect409r1";
+    break;
+  case SEC_OID_SECG_EC_SECT571K1:
+    out = "ECsect571k1";
+    break;
+  case SEC_OID_SECG_EC_SECT571R1:
+    out = "ECsect571r1";
+    break;
+  default: {
+ /*
+    if (oidTag == SEC_OID(MS_CERT_EXT_CERTTYPE)) {
+      out = "MSCerttype";
+      break;
+    }
+    if (oidTag == SEC_OID(MS_CERTSERV_CA_VERSION)) {
+      out = "MSCAVersion";
+      break;
+    }
+    if (oidTag == SEC_OID(PKIX_LOGOTYPE)) {
+      out = "Logotype";
+      break;
+    }
+    */
+
+    char* oidchar = CERT_GetOidString(oid);
+    SV* oidstr = newSVpv(oidchar, 0);
+    PR_smprintf_free(oidchar);
+    return oidstr;
+    }
+
+  }
+
+  return newSVpvf("%s", out);
+}
+
 static PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
   switch(usage) {
     case certUsageSSLClient:
@@ -251,6 +631,27 @@ static HV* node_to_hv(CERTVerifyLogNode* node) {
 
   return out;
 }
+
+static
+SV* item_to_hex(SECItem *data) {
+  // do it like mozilla - if data <= 4 -> make integger
+  
+  if ( data-> len <=4 ) {
+    int i = DER_GetInteger(data);
+    return newSViv(i);
+  }
+
+  // ok. That was easy. Now let's produce a hex-dump otherwise
+
+  SV* out = newSVpvn("",0); 
+  for ( unsigned int i = 0; i < data->len; i++ ) {
+    sv_catpvf(out, "%02x", data->data[i]);
+  }
+
+  return out;
+}
+  
+    
 
 static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
@@ -542,6 +943,119 @@ DESTROY(certlist)
 
 MODULE = NSS    PACKAGE = NSS::Certificate
 
+
+SV*
+curve(cert)
+  NSS::Certificate cert
+
+  PREINIT:
+  SECKEYPublicKey *key;
+  SECOidTag tag;
+
+  CODE:
+
+  // This function extracts the curve from a NSS Certificate
+  // As you will see, this is one of the moist straightforward
+  // things to do. Totally easy. Everyone can do that. And find
+  // out. Only took like 10 minutes.
+  // Srsly.
+  
+  SECItem oid = { siBuffer, NULL, 0};
+
+  // this is the complicated part
+  key = SECKEY_ExtractPublicKey(&cert->subjectPublicKeyInfo);
+  if ( key->keyType != ecKey ) {
+    SECKEY_DestroyPublicKey(key);
+    croak("Only ec-keys have a curve");
+  }
+
+  // ok, now it gets simple.
+  oid.len = key->u.ec.DEREncodedParams.len - 2;
+  oid.data = key->u.ec.DEREncodedParams.data + 2;
+  if ((key->u.ec.DEREncodedParams.data[0] != SEC_ASN1_OBJECT_ID) ||
+        ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)) { 
+    SECKEY_DestroyPublicKey(key);
+    croak("Unknown EC-key");
+  }
+
+  RETVAL = OidToSV(&oid);
+
+  SECKEY_DestroyPublicKey(key);
+  
+  OUTPUT:
+  RETVAL
+    
+
+SV*
+bit_length(cert)
+  NSS::Certificate cert
+  
+  ALIAS:
+  modulus = 1
+  public_key = 1
+  exponent = 2
+
+  PREINIT:
+  SECKEYPublicKey *key;
+
+  CODE:
+  key = SECKEY_ExtractPublicKey(&cert->subjectPublicKeyInfo);
+
+  if ( key ) {
+    switch(key->keyType) {
+    case rsaKey: {
+
+      if ( ix == 0 ) {
+        RETVAL = newSViv(key->u.rsa.modulus.len * 8);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.rsa.modulus);
+      } else if ( ix == 2 ) {
+        RETVAL = item_to_hex(&key->u.rsa.publicExponent);
+      } else {
+        SECKEY_DestroyPublicKey(key);        
+        croak("Internal error");
+      }
+
+      break;
+    } 
+    case ecKey: {
+      if ( ix == 0 ) {
+        int len = SECKEY_ECParamsToKeySize(&key->u.ec.DEREncodedParams);
+        RETVAL = newSViv(len);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.ec.publicValue);
+      } else {
+        SECKEY_DestroyPublicKey(key);        
+        croak("EC certificates do not have exponent");
+      }
+
+      break;
+    }
+    case dsaKey: {
+      if ( ix == 0 ) {
+        RETVAL = newSViv(key->u.dsa.publicValue.len * 8);
+      } else if ( ix == 1 ) {
+        RETVAL = item_to_hex(&key->u.dsa.publicValue);
+      } else {
+        SECKEY_DestroyPublicKey(key);        
+        croak("DSA certificates do not have exponent");
+      }
+      break;
+    }
+    default:
+      croak("Unknown key type %d", key->keyType);
+    }  
+   
+    SECKEY_DestroyPublicKey(key);
+  } else {
+    XSRETURN_UNDEF;
+  }
+
+  OUTPUT:
+  RETVAL
+
+  
+
 SV*
 accessor(cert)
   NSS::Certificate cert  
@@ -552,14 +1066,21 @@ accessor(cert)
   serial_raw = 3
   notBefore = 5
   notAfter = 6
+  email = 7
   version = 8
   subj_alt_name = 9
   common_name = 10
   is_root = 11
+  sig_alg_name = 12
+  key_alg_name = 13
 
   PREINIT:
 
   CODE:
+
+  if ( ix == 0 ) {
+    croak("Do not access accessor");
+  }
 
   if ( ix == 1 ) {
     RETVAL = newSVpvf("%s", cert->subjectName);
@@ -567,6 +1088,12 @@ accessor(cert)
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
     RETVAL = item_to_sv(&cert->serialNumber);
+  } else if ( ix == 7 ) {
+    char * ce = CERT_GetCertificateEmailAddress(cert);
+    if ( ce == NULL ) 
+      XSRETURN_UNDEF;
+    RETVAL = newSVpvf("%s", ce);
+    PORT_Free(ce);
   } else if ( ix == 10 ) {
     char * cn = CERT_GetCommonName(&cert->subject);
     RETVAL = newSVpvf("%s", cn);
@@ -577,6 +1104,10 @@ accessor(cert)
     } else {
       XSRETURN_NO;
     }
+  } else if ( ix == 12 ) {
+    RETVAL = OidToSV(&cert->signature.algorithm);
+  } else if ( ix == 13 ) {
+    RETVAL = OidToSV(&cert->subjectPublicKeyInfo.algorithm.algorithm);
   } else if ( ix == 5 || ix == 6 ) {
     int64 time;
     SECStatus rv;
@@ -659,11 +1190,11 @@ accessor(cert)
     RETVAL = out;
 
     if (arena) {
-  PORT_FreeArena(arena, PR_FALSE);
+      PORT_FreeArena(arena, PR_FALSE);
     }
 
     if (subAltName.data) {
-  SECITEM_FreeItem(&subAltName, PR_FALSE);
+      SECITEM_FreeItem(&subAltName, PR_FALSE);
     }
 
 
@@ -908,6 +1439,9 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   I32 usage;
   NSS::CertList trustedCertList;
 
+  ALIAS:
+  verify_pkix_aia = 1
+
   PREINIT:
   SECStatus secStatus;
   PRBool certFetching = PR_FALSE; // automatically get AIA certs
@@ -921,6 +1455,10 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   CERTVerifyLog log;
 
   CODE:
+
+  if ( ix == 1 ) {
+    certFetching = PR_TRUE;
+  }
 
   cvin[inParamIndex].type = cert_pi_useAIACertFetch;
   cvin[inParamIndex].value.scalar.b = certFetching;

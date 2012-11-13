@@ -14,7 +14,7 @@ NSS - Perl interface for the certificate handling parts of the NSS api.
   say $cert->subject();
   say $cert->issuer();
 
-  my $valid = $cert->validate_cert();
+  my $valid = $cert->verify_cert();
   
   if ( ! $cert->match_name('www.testdomain') ) {
     # Domain does not match certificate information
@@ -24,7 +24,7 @@ NSS - Perl interface for the certificate handling parts of the NSS api.
 
 =head1 ABSTRACT
 
-Perl interface for the certificate handling parts of the NSS api..
+Perl interface for the certificate handling parts of the NSS API.
 
 =head1 DESCRIPTION
 
@@ -37,6 +37,9 @@ verification functions provided by NSS.
 
 Please note that this is a very early version of the library, the interface
 API will change.
+
+This document just describes the NSS class and how to load it; for certificate
+parsing you probably want to refer to L<NSS::Certificate>
 
 =head2 EXPORT
 
@@ -59,6 +62,11 @@ specified directory, it is automatically generated
 
   use NSS (':dpath', $dbdir);
 
+A third option for loading NSS without any initialization is also offered.
+It should however not be used in normal operation - about the only
+reason to use it is if you have to switch between several different root-stores
+while running a script. If you absolutely need it, examine the source :).
+
 =head1 FUNCTIONS
 
 Note that all functions are called as B<functions, not methods>.
@@ -77,6 +85,12 @@ Note that this function requires a NSS database.
 
 This function adds a specified C<NSS::Certificate> to the active NSS database
 and stores it using the nickname C<$nick>.
+
+=item B<NSS::add_trusted_cert_to_db($cert, $nick)>
+
+This function adds a specified C<NSS::Certificate> to the active NSS database
+and stores it using the nickname c<$nick>. The certificate is marked as trusted
+for all purposes. Used by C<NSS::load_rootlist> to add the certificates.
 
 =item B<NSS::dump_certificate_cache_info()>
 
