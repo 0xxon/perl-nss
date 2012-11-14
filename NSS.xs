@@ -885,6 +885,31 @@ curve(cert)
   OUTPUT:
   RETVAL
     
+SV*
+raw_spki(cert)
+  NSS::Certificate cert
+
+  PREINIT:
+  SV* out;
+  SECItem sig;
+
+  CODE:
+  //out = item_to_sv(&cert->subjectPublicKeyInfo.algorithm.algorithm);
+  //sv_catsv(out, sv_2mortal(item_to_sv(&cert->subjectPublicKeyInfo.algorithm.parameters)));
+
+  //sig = cert->subjectPublicKeyInfo.subjectPublicKey;
+  //DER_ConvertBitString(&sig);
+
+  //sv_catsv(out, sv_2mortal(item_to_sv(&sig)));
+  //out = item_to_sv(&sig);
+  
+  //out = item_to_hex(CERT_GetSPKIDigest(NULL, cert, SEC_OID_SHA256, NULL));
+  out = item_to_sv(&cert->derPublicKey);
+
+  RETVAL = out;
+
+  OUTPUT:
+  RETVAL
 
 SV*
 bit_length(cert)
