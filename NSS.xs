@@ -891,19 +891,8 @@ raw_spki(cert)
 
   PREINIT:
   SV* out;
-  SECItem sig;
 
   CODE:
-  //out = item_to_sv(&cert->subjectPublicKeyInfo.algorithm.algorithm);
-  //sv_catsv(out, sv_2mortal(item_to_sv(&cert->subjectPublicKeyInfo.algorithm.parameters)));
-
-  //sig = cert->subjectPublicKeyInfo.subjectPublicKey;
-  //DER_ConvertBitString(&sig);
-
-  //sv_catsv(out, sv_2mortal(item_to_sv(&sig)));
-  //out = item_to_sv(&sig);
-  
-  //out = item_to_hex(CERT_GetSPKIDigest(NULL, cert, SEC_OID_SHA256, NULL));
   out = item_to_sv(&cert->derPublicKey);
 
   RETVAL = out;
@@ -998,6 +987,8 @@ accessor(cert)
   is_root = 11
   sig_alg_name = 12
   key_alg_name = 13
+  nickname = 14
+  dbnickname = 15
 
   PREINIT:
 
@@ -1019,6 +1010,10 @@ accessor(cert)
       XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", ce);
     PORT_Free(ce);
+  } else if ( ix == 14 ) {
+    RETVAL = newSVpvf("%s", cert->nickname);
+  } else if ( ix == 15 ) {
+    RETVAL = newSVpvf("%s", cert->dbnickname);
   } else if ( ix == 10 ) {
     char * cn = CERT_GetCommonName(&cert->subject);
     RETVAL = newSVpvf("%s", cn);
@@ -1384,8 +1379,9 @@ get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   RETVAL
 
 NSS::Certificate
-new(class, string)
+new(class, string, nickSv = NO_INIT)
   SV  *string
+  SV  *nickSv
 
   PREINIT:
   CERTCertificate *cert;
@@ -1393,9 +1389,14 @@ new(class, string)
   //PRFileDesc*     fd;
   SECStatus       rv;
   SECItem         item        = {0, NULL, 0};
+  char* nick = NULL;
 
   CODE:
  // SV  *class
+ 
+  if ( items == 3 ) {
+    nick = SvPV_nolen(nickSv);
+  }
 
   defaultDB = CERT_GetDefaultCertDB();
   rv = sv_to_item(string, &item);
@@ -1404,11 +1405,10 @@ new(class, string)
   }
 
   cert = CERT_NewTempCertificate(defaultDB, &item, 
-                                   NULL     /* nickname */, 
+                                   "maja"     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
            PR_TRUE  /* copyDER */);
 
-  
   if (!cert) {
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",

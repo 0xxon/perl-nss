@@ -127,7 +127,8 @@ sub serial {
 }
 
 sub new_from_pem {
-	my ($class, $pem) = @_;
+	my $class = shift;
+	my $pem = shift;
 
 	$pem =~ s/-----BEGIN CERTIFICATE-----// or die("Did not found certificate start");
 	$pem =~ s/-----END CERTIFICATE-----// or die ("Did not found certificate end");
@@ -137,7 +138,7 @@ sub new_from_pem {
 		die("Could not decode certificate");
 	}
 
-	return $class->new($der);
+	return $class->new($der, @_);
 }
 
 
