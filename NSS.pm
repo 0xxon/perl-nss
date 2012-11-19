@@ -141,7 +141,6 @@ sub new_from_pem {
 	return $class->new($der, @_);
 }
 
-
 1;
 
 __END__

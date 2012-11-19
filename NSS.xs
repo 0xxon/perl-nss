@@ -38,6 +38,8 @@
 /* fake our package name */
 typedef CERTCertificate* NSS__Certificate;
 typedef CERTCertList* NSS__CertList;
+typedef CERTSignedCrl* NSS__CRL;
+typedef CERTCrlEntry* NSS__CRL__Entry;
 
 char* initstring;
 
@@ -552,6 +554,15 @@ SV* item_to_hex(SECItem *data) {
 }
   
     
+static
+SV* item_to_hhex(SECItem *data) {
+  SV* out = newSVpvn("",0); 
+  for ( unsigned int i = 0; i < data->len; i++ ) {
+    sv_catpvf(out, "%02x", data->data[i]);
+  }
+
+  return out;
+}
 
 static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
@@ -775,8 +786,99 @@ dump_certificate_cache_info()
 
   CODE:
   nss_DumpCertificateCacheInfo();
-  
 
+
+MODULE = NSS    PACKAGE = NSS::CRL
+
+NSS::CRL
+new_from_der(class, string)
+  SV* string
+
+  PREINIT:
+  SECItem item;
+  CERTSignedCrl *signedCrl;
+  SECStatus rv;
+
+  CODE:
+  rv = sv_to_item(string, &item);
+  if (rv != SECSuccess) {
+    croak("sv_to_item failed");
+  }  
+
+  //PRInt32 decodeOptions = CRL_DECODE_DEFAULT_OPTIONS;
+
+  signedCrl = CERT_DecodeDERCrlWithFlags(NULL, &item, SEC_CRL_TYPE, CRL_DECODE_DEFAULT_OPTIONS);
+
+  if ( !signedCrl ) {
+    PRErrorCode err = PR_GetError();
+    croak( "Could not decode CRL %d = %s\n",
+           err, PORT_ErrorToString(err));
+  }
+
+  RETVAL = signedCrl;
+
+  OUTPUT:
+  RETVAL
+
+void
+verify(crl, cert, timedouble = NO_INIT)
+  NSS::CRL crl
+  NSS::Certificate cert
+  SV* timedouble
+
+  PREINIT:
+  SECStatus rv;
+  PRTime time = 0;
+
+  PPCODE:
+  if ( items < 3 || SvIV(timedouble) == 0 ) {
+    time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }  
+
+  rv = CERT_VerifySignedData(&crl->signatureWrap, cert, time, NULL);
+
+  if ( rv != SECSuccess ) {
+    XSRETURN_NO;
+  }
+
+  XSRETURN_YES;
+
+
+void
+entries(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  CERTCrlEntry *entry;
+  int iv;
+
+  PPCODE:
+  if ( crl->crl.entries != NULL ) {
+    iv = 0;
+    while( (entry = crl->crl.entries[iv++]) != NULL) {
+      SV* e = newSV(0);
+      sv_setref_pv(e, "NSS::CRL::Entry", entry);
+      mPUSHs(e);
+    }
+  }
+
+MODULE = NSS    PACKAGE = NSS::CRL::Entry
+
+SV* 
+serial(entry)
+  NSS::CRL::Entry entry
+
+  CODE:
+  RETVAL = item_to_hhex(&entry->serialNumber);  
+
+  OUTPUT:
+  RETVAL
+    
 MODULE = NSS    PACKAGE = NSS::CertList
 
 NSS::CertList
@@ -977,7 +1079,7 @@ accessor(cert)
   ALIAS:
   subject = 1
   issuer = 2  
-  serial_raw = 3
+  serial = 3
   notBefore = 5
   notAfter = 6
   email = 7
@@ -1003,7 +1105,7 @@ accessor(cert)
   } else if ( ix == 2 ) {
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
-    RETVAL = item_to_sv(&cert->serialNumber);
+    RETVAL = item_to_hhex(&cert->serialNumber);
   } else if ( ix == 7 ) {
     char * ce = CERT_GetCertificateEmailAddress(cert);
     if ( ce == NULL ) 
