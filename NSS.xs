@@ -1,3 +1,9 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ **/ 
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -965,6 +971,7 @@ DESTROY(crl)
 
   if ( crl ) {
     CERT_DestroyCrl(crl); 
+    printf("Destroying...\n");
     crl = 0;
   }
 
@@ -984,6 +991,7 @@ entries(crl)
   if ( crl->crl.entries != NULL ) {
     iv = 0;
     while( (entry = crl->crl.entries[iv++]) != NULL) {
+      SvREFCNT_inc_void(crl); // every entry needs the crl to be present - otherwhise the arena containing it might be freed.
       SV* e = newSV(0);
       sv_setref_pv(e, "NSS::CRL::Entry", entry);
       mXPUSHs(e);
