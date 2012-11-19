@@ -32,7 +32,7 @@ diag('Selfsigned certificate');
 diag('Google certificate');
 {
 	my $pem = slurp("certs/google.crt");
-	my $cert = NSS::Certificate->new_from_pem($pem);
+	my $cert = NSS::Certificate->new_from_pem($pem, "google");
 
 	isa_ok($cert, 'NSS::Certificate');
 	is($cert->issuer, 'CN=Thawte SGC CA,O=Thawte Consulting (Pty) Ltd.,C=ZA', 'issuer');
@@ -77,8 +77,6 @@ diag('NIST DSA test-certificate');
 	is($cert->modulus, 'b59e1f490447d1dbf53addca0475e8dd75f69b8ab197d6596982d3034dfd3b365f4af2d14ec107f5d12ad378776356ea96614d420b7a1dfbab91a4cedeef77c8e5ef20aea62848afbe69c36aa530f2c2b9d9822b7dd9c4841fde0de854d71b992eb3d088f6d6639ba7e20e82d43b8a681b065631590b49eb99a5d581417bc955', 'modulus');
 	is($cert->modulus, $cert->public_key, 'public_key function');
 }
-
-
 
 sub slurp {
   local $/=undef;

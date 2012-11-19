@@ -58,11 +58,13 @@ Johanna Amann, E<lt>johanna@icir.orgE<gt>
 
 Copyright 2012 by Johanna Amann
 
-This library is free software and licensed under the GNU LGPL, version 2.1
-as available at http://www.gnu.org/licenses/lgpl-2.1.html.
+This Library is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 The library contains source code of the Mozilla Network Security Services; for
-NSS license information please see http://www.mozilla.org/projects/security/pki/nss/.
+NSS license information please see http://www.mozilla.org/projects/security/pki/
+nss/.
 
 =cut
 

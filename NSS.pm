@@ -122,12 +122,9 @@ sub new_from_rootlist {
 package NSS::Certificate;
 use MIME::Base64 ();
 
-sub serial {
-	return unpack("H*", serial_raw(@_));
-}
-
 sub new_from_pem {
-	my ($class, $pem) = @_;
+	my $class = shift;
+	my $pem = shift;
 
 	$pem =~ s/-----BEGIN CERTIFICATE-----// or die("Did not found certificate start");
 	$pem =~ s/-----END CERTIFICATE-----// or die ("Did not found certificate end");
@@ -137,9 +134,8 @@ sub new_from_pem {
 		die("Could not decode certificate");
 	}
 
-	return $class->new($der);
+	return $class->new($der, @_);
 }
-
 
 1;
 

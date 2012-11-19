@@ -1,7 +1,7 @@
 use inc::Module::Install;
 
 name('NSS');
-license('lgpl');
+license('mozilla');
 perl_version('5.10.1');
 all_from('NSS.pm');
 

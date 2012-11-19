@@ -1,3 +1,9 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ **/ 
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -20,11 +26,7 @@
 #include "cert.h"
 #include "ocsp.h"
 #include "keyhi.h"
-
-/* #include <stdlib.h> */
-/* #include <errno.h> */
-/* #include <fcntl.h> */
-/* #include <stdarg.h> */
+#include "secerr.h"
 
 #include "nspr.h"
 #include "plgetopt.h"
@@ -138,6 +140,8 @@ static struct nsSerialBinaryBlacklistEntry myUTNBlacklistEntries[] = {
 /* fake our package name */
 typedef CERTCertificate* NSS__Certificate;
 typedef CERTCertList* NSS__CertList;
+typedef CERTSignedCrl* NSS__CRL;
+typedef CERTCrlEntry* NSS__CRL__Entry;
 
 char* initstring;
 
@@ -206,6 +210,50 @@ configureRevocationParams(CERTRevocationFlags *flags)
 }
 
 //---- end direct copy from vfychain.c
+
+
+// adapted from secutil.c - removed unnecessary argument.
+
+/*
+ * Find the issuer of a Crl.  Use the authorityKeyID if it exists.
+ */
+CERTCertificate *
+FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
+                   PRTime validTime)
+{
+    CERTCertificate *issuerCert = NULL;
+    CERTCertList *certList = NULL;
+
+    if (!subject) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return NULL;
+    }
+
+    certList =
+        CERT_CreateSubjectCertList(NULL, dbhandle, subject,
+                                   validTime, PR_TRUE);
+    if (certList) {
+        CERTCertListNode *node = CERT_LIST_HEAD(certList);
+    
+        /* XXX and authoritykeyid in the future */
+        while ( ! CERT_LIST_END(node, certList) ) {
+            CERTCertificate *cert = node->cert;
+            /* check cert CERTCertTrust data is allocated, check cert
+               usage extension, check that cert has pkey in db. Select
+               the first (newest) user cert */
+            if (cert->trust &&
+                CERT_CheckCertUsage(cert, KU_CRL_SIGN) == SECSuccess) {
+                
+                issuerCert = CERT_DupCertificate(cert);
+                break;
+            }
+            node = CERT_LIST_NEXT(node);   
+        }
+        CERT_DestroyCertList(certList);
+    }
+    return(issuerCert);
+}
+
 
 
 // function more or less ripped from nsNSSCertHelper.cpp, because NSS does apparently
@@ -652,6 +700,15 @@ SV* item_to_hex(SECItem *data) {
 }
   
     
+static
+SV* item_to_hhex(SECItem *data) {
+  SV* out = newSVpvn("",0); 
+  for ( unsigned int i = 0; i < data->len; i++ ) {
+    sv_catpvf(out, "%02x", data->data[i]);
+  }
+
+  return out;
+}
 
 static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
   STRLEN len;
@@ -875,8 +932,184 @@ dump_certificate_cache_info()
 
   CODE:
   nss_DumpCertificateCacheInfo();
-  
 
+
+MODULE = NSS    PACKAGE = NSS::CRL
+
+NSS::CRL
+new_from_der(class, string)
+  SV* string
+
+  PREINIT:
+  SECItem item;
+  CERTSignedCrl *signedCrl;
+  SECStatus rv;
+
+  CODE:
+  rv = sv_to_item(string, &item);
+  if (rv != SECSuccess) {
+    croak("sv_to_item failed");
+  }  
+
+  //PRInt32 decodeOptions = CRL_DECODE_DEFAULT_OPTIONS;
+
+  signedCrl = CERT_DecodeDERCrlWithFlags(NULL, &item, SEC_CRL_TYPE, CRL_DECODE_DEFAULT_OPTIONS);
+
+  if ( !signedCrl ) {
+    PRErrorCode err = PR_GetError();
+    croak( "Could not decode CRL %d = %s\n",
+           err, PORT_ErrorToString(err));
+  }
+
+  RETVAL = signedCrl;
+
+  OUTPUT:
+  RETVAL
+
+
+SV*
+issuer(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  char* c;
+
+  CODE:
+  c = CERT_DerNameToAscii(&crl->crl.derName);
+
+  RETVAL = newSVpvf("%s", c);
+
+  PORT_Free(c);
+
+  OUTPUT:
+  RETVAL
+
+void
+verify(crl, cert, timedouble = NO_INIT)
+  NSS::CRL crl
+  NSS::Certificate cert
+  SV* timedouble
+
+  PREINIT:
+  SECStatus rv;
+  PRTime time = 0;
+
+  PPCODE:
+  if ( items < 3 || SvIV(timedouble) == 0 ) {
+    time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }  
+
+  rv = CERT_VerifySignedData(&crl->signatureWrap, cert, time, NULL);
+
+  if ( rv != SECSuccess ) {
+    XSRETURN_NO;
+  }
+
+  XSRETURN_YES;
+
+NSS::Certificate
+find_issuer(crl, timedouble = NO_INIT)
+  NSS::CRL crl
+  SV* timedouble
+
+  ALIAS:
+  verify_db = 1
+
+  PREINIT:
+  PRTime time = 0;
+  CERTCertDBHandle *defaultDB;
+  SECItem* subject = NULL;
+  CERTCertificate* cert;
+  SECStatus rv;  
+  
+  CODE:
+  if ( items < 2 || SvIV(timedouble) == 0 ) {
+    time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }  
+
+  defaultDB = CERT_GetDefaultCertDB();
+
+  subject = &crl->crl.derName;
+  cert = FindCrlIssuer(defaultDB, subject, time);
+
+  if ( !cert ) {
+    XSRETURN_UNDEF;
+  }
+
+  if ( ix == 1 ) {
+    rv = CERT_VerifySignedData(&crl->signatureWrap, cert, time, NULL);
+    CERT_DestroyCertificate(cert);
+
+    if ( rv != SECSuccess ) {
+      XSRETURN_NO;
+    }
+
+    XSRETURN_YES;
+  }  
+    
+
+  RETVAL = cert;
+
+  OUTPUT:
+  RETVAL
+
+void 
+DESTROY(crl)
+  NSS::CRL crl
+
+  PPCODE:
+
+  if ( crl ) {
+    CERT_DestroyCrl(crl); 
+    printf("Destroying...\n");
+    crl = 0;
+  }
+
+
+void
+entries(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  CERTCrlEntry *entry;
+  int iv;
+
+  PPCODE:
+  // this is unsafe, because entries only live as long as the crl lives.
+  //
+  // the entries would have to increment the refcount of the crl - implement this sometime.
+  if ( crl->crl.entries != NULL ) {
+    iv = 0;
+    while( (entry = crl->crl.entries[iv++]) != NULL) {
+      SvREFCNT_inc_void(crl); // every entry needs the crl to be present - otherwhise the arena containing it might be freed.
+      SV* e = newSV(0);
+      sv_setref_pv(e, "NSS::CRL::Entry", entry);
+      mXPUSHs(e);
+    }
+  }
+
+MODULE = NSS    PACKAGE = NSS::CRL::Entry
+
+SV* 
+serial(entry)
+  NSS::CRL::Entry entry
+
+  CODE:
+  RETVAL = item_to_hhex(&entry->serialNumber);  
+
+  OUTPUT:
+  RETVAL
+    
 MODULE = NSS    PACKAGE = NSS::CertList
 
 NSS::CertList
@@ -936,7 +1169,7 @@ DESTROY(certlist)
   PPCODE:
 
   if ( certlist ) {
-    CERT_DestroyCertList(certlist); // memory leak - certificates in list are not actually deleted. 
+    CERT_DestroyCertList(certlist); 
     certlist = 0;
   }
 
@@ -991,19 +1224,8 @@ raw_spki(cert)
 
   PREINIT:
   SV* out;
-  SECItem sig;
 
   CODE:
-  //out = item_to_sv(&cert->subjectPublicKeyInfo.algorithm.algorithm);
-  //sv_catsv(out, sv_2mortal(item_to_sv(&cert->subjectPublicKeyInfo.algorithm.parameters)));
-
-  //sig = cert->subjectPublicKeyInfo.subjectPublicKey;
-  //DER_ConvertBitString(&sig);
-
-  //sv_catsv(out, sv_2mortal(item_to_sv(&sig)));
-  //out = item_to_sv(&sig);
-  
-  //out = item_to_hex(CERT_GetSPKIDigest(NULL, cert, SEC_OID_SHA256, NULL));
   out = item_to_sv(&cert->derPublicKey);
 
   RETVAL = out;
@@ -1088,7 +1310,7 @@ accessor(cert)
   ALIAS:
   subject = 1
   issuer = 2  
-  serial_raw = 3
+  serial = 3
   notBefore = 5
   notAfter = 6
   email = 7
@@ -1098,6 +1320,8 @@ accessor(cert)
   is_root = 11
   sig_alg_name = 12
   key_alg_name = 13
+  nickname = 14
+  dbnickname = 15
 
   PREINIT:
 
@@ -1112,13 +1336,17 @@ accessor(cert)
   } else if ( ix == 2 ) {
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
-    RETVAL = item_to_sv(&cert->serialNumber);
+    RETVAL = item_to_hhex(&cert->serialNumber);
   } else if ( ix == 7 ) {
     char * ce = CERT_GetCertificateEmailAddress(cert);
     if ( ce == NULL ) 
       XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", ce);
     PORT_Free(ce);
+  } else if ( ix == 14 ) {
+    RETVAL = newSVpvf("%s", cert->nickname);
+  } else if ( ix == 15 ) {
+    RETVAL = newSVpvf("%s", cert->dbnickname);
   } else if ( ix == 10 ) {
     char * cn = CERT_GetCommonName(&cert->subject);
     RETVAL = newSVpvf("%s", cn);
@@ -1594,8 +1822,9 @@ get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   RETVAL
 
 NSS::Certificate
-new(class, string)
+new(class, string, nickSv = NO_INIT)
   SV  *string
+  SV  *nickSv
 
   PREINIT:
   CERTCertificate *cert;
@@ -1603,9 +1832,14 @@ new(class, string)
   //PRFileDesc*     fd;
   SECStatus       rv;
   SECItem         item        = {0, NULL, 0};
+  char* nick = NULL;
 
   CODE:
  // SV  *class
+ 
+  if ( items == 3 ) {
+    nick = SvPV_nolen(nickSv);
+  }
 
   defaultDB = CERT_GetDefaultCertDB();
   rv = sv_to_item(string, &item);
@@ -1614,11 +1848,10 @@ new(class, string)
   }
 
   cert = CERT_NewTempCertificate(defaultDB, &item, 
-                                   NULL     /* nickname */, 
+                                   "maja"     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
            PR_TRUE  /* copyDER */);
 
-  
   if (!cert) {
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",
