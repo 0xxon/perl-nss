@@ -136,8 +136,7 @@ FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
                usage extension, check that cert has pkey in db. Select
                the first (newest) user cert */
             if (cert->trust &&
-                CERT_CheckCertUsage(cert, KU_CRL_SIGN) == SECSuccess &&
-                CERT_IsUserCert(cert)) {
+                CERT_CheckCertUsage(cert, KU_CRL_SIGN) == SECSuccess) {
                 
                 issuerCert = CERT_DupCertificate(cert);
                 break;
