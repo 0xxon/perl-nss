@@ -122,10 +122,6 @@ sub new_from_rootlist {
 package NSS::Certificate;
 use MIME::Base64 ();
 
-sub serial {
-	return unpack("H*", serial_raw(@_));
-}
-
 sub new_from_pem {
 	my $class = shift;
 	my $pem = shift;
