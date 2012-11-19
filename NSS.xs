@@ -848,6 +848,17 @@ verify(crl, cert, timedouble = NO_INIT)
 
   XSRETURN_YES;
 
+void 
+DESTROY(crl)
+  NSS::CRL crl
+
+  PPCODE:
+
+  if ( crl ) {
+    CERT_DestroyCrl(crl); 
+    crl = 0;
+  }
+
 
 void
 entries(crl)
@@ -858,6 +869,9 @@ entries(crl)
   int iv;
 
   PPCODE:
+  // this is unsafe, because entries only live as long as the crl lives.
+  //
+  // the entries would have to increment the refcount of the crl - implement this sometime.
   if ( crl->crl.entries != NULL ) {
     iv = 0;
     while( (entry = crl->crl.entries[iv++]) != NULL) {
@@ -938,7 +952,7 @@ DESTROY(certlist)
   PPCODE:
 
   if ( certlist ) {
-    CERT_DestroyCertList(certlist); // memory leak - certificates in list are not actually deleted. 
+    CERT_DestroyCertList(certlist); 
     certlist = 0;
   }
 
