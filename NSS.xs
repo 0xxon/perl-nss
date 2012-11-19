@@ -19,11 +19,7 @@
 #include "cert.h"
 #include "ocsp.h"
 #include "keyhi.h"
-
-/* #include <stdlib.h> */
-/* #include <errno.h> */
-/* #include <fcntl.h> */
-/* #include <stdarg.h> */
+#include "secerr.h"
 
 #include "nspr.h"
 #include "plgetopt.h"
@@ -108,6 +104,51 @@ configureRevocationParams(CERTRevocationFlags *flags)
 }
 
 //---- end direct copy from vfychain.c
+
+
+// adapted from secutil.c - removed unnecessary argument.
+
+/*
+ * Find the issuer of a Crl.  Use the authorityKeyID if it exists.
+ */
+CERTCertificate *
+FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
+                   PRTime validTime)
+{
+    CERTCertificate *issuerCert = NULL;
+    CERTCertList *certList = NULL;
+
+    if (!subject) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return NULL;
+    }
+
+    certList =
+        CERT_CreateSubjectCertList(NULL, dbhandle, subject,
+                                   validTime, PR_TRUE);
+    if (certList) {
+        CERTCertListNode *node = CERT_LIST_HEAD(certList);
+    
+        /* XXX and authoritykeyid in the future */
+        while ( ! CERT_LIST_END(node, certList) ) {
+            CERTCertificate *cert = node->cert;
+            /* check cert CERTCertTrust data is allocated, check cert
+               usage extension, check that cert has pkey in db. Select
+               the first (newest) user cert */
+            if (cert->trust &&
+                CERT_CheckCertUsage(cert, KU_CRL_SIGN) == SECSuccess &&
+                CERT_IsUserCert(cert)) {
+                
+                issuerCert = CERT_DupCertificate(cert);
+                break;
+            }
+            node = CERT_LIST_NEXT(node);   
+        }
+        CERT_DestroyCertList(certList);
+    }
+    return(issuerCert);
+}
+
 
 
 // function more or less ripped from nsNSSCertHelper.cpp, because NSS does apparently
@@ -848,6 +889,58 @@ verify(crl, cert, timedouble = NO_INIT)
 
   XSRETURN_YES;
 
+NSS::Certificate
+find_issuer(crl, timedouble = NO_INIT)
+  NSS::CRL crl
+  SV* timedouble
+
+  ALIAS:
+  verify_db = 1
+
+  PREINIT:
+  PRTime time = 0;
+  CERTCertDBHandle *defaultDB;
+  SECItem* subject = NULL;
+  CERTCertificate* cert;
+  SECStatus rv;  
+  
+  CODE:
+  if ( items < 2 || SvIV(timedouble) == 0 ) {
+    time = PR_Now();
+  } else {
+    double tmptime = SvNV(timedouble);
+    // time contains seconds since epoch - netscape expects microseconds
+    tmptime = tmptime * 1000000;
+    LL_D2L(time, tmptime); // and convert to 64-bit int
+  }  
+
+  defaultDB = CERT_GetDefaultCertDB();
+
+  subject = &crl->crl.derName;
+  cert = FindCrlIssuer(defaultDB, subject, time);
+
+  if ( !cert ) {
+    XSRETURN_UNDEF;
+  }
+
+  if ( ix == 1 ) {
+    rv = CERT_VerifySignedData(&crl->signatureWrap, cert, time, NULL);
+    CERT_DestroyCertificate(cert);
+
+    if ( rv != SECSuccess ) {
+      XSRETURN_NO;
+    }
+
+    XSRETURN_YES;
+  }  
+    
+
+  RETVAL = cert;
+
+  OUTPUT:
+  RETVAL
+
+
 void 
 DESTROY(crl)
   NSS::CRL crl
@@ -877,7 +970,7 @@ entries(crl)
     while( (entry = crl->crl.entries[iv++]) != NULL) {
       SV* e = newSV(0);
       sv_setref_pv(e, "NSS::CRL::Entry", entry);
-      mPUSHs(e);
+      mXPUSHs(e);
     }
   }
 
