@@ -861,6 +861,24 @@ new_from_der(class, string)
   OUTPUT:
   RETVAL
 
+
+SV*
+issuer(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  char* c;
+
+  CODE:
+  c = CERT_DerNameToAscii(&crl->crl.derName);
+
+  RETVAL = newSVpvf("%s", c);
+
+  PORT_Free(c);
+
+  OUTPUT:
+  RETVAL
+
 void
 verify(crl, cert, timedouble = NO_INIT)
   NSS::CRL crl
@@ -939,7 +957,6 @@ find_issuer(crl, timedouble = NO_INIT)
 
   OUTPUT:
   RETVAL
-
 
 void 
 DESTROY(crl)
