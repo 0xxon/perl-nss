@@ -26,6 +26,7 @@
 #include "ocsp.h"
 #include "keyhi.h"
 #include "secerr.h"
+#include "blapit.h"
 
 #include "nspr.h"
 #include "plgetopt.h"
@@ -1201,7 +1202,44 @@ bit_length(cert)
   OUTPUT:
   RETVAL
 
+
+SV*
+fingerprint_md5(cert)
+  NSS::Certificate cert
+
+  ALIAS:
+  fingerprint_sha1 = 1
+  fingerprint_sha256 = 2
+
+  PREINIT:
+  SECItem item;
+  SECStatus rv;
+  unsigned char fingerprint[32];
+
+  CODE:
+
+  memset(fingerprint, 0, sizeof(fingerprint));
+  if ( ix == 0 ) {
+    rv = PK11_HashBuf(SEC_OID_MD5, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = MD5_LENGTH;
+  } else if ( ix == 1 ) {
+    rv = PK11_HashBuf(SEC_OID_SHA1, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = SHA1_LENGTH;
+  } else if ( ix == 2 ) {
+    rv = PK11_HashBuf(SEC_OID_SHA256, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = SHA256_LENGTH;
+  }
   
+  if ( rv != SECSuccess ) {
+    croak("Could not calculate fingerprint");
+  }
+
+  item.data = fingerprint;
+  RETVAL = item_to_hhex(&item);
+
+  OUTPUT:
+  RETVAL
+
 
 SV*
 accessor(cert)

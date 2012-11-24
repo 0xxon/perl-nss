@@ -126,6 +126,18 @@ does not contain an RSA key, so check first using C<key_alg_name>.
 Name of the EC-curve used in the certificate. Croaks if the certificate is
 not an EC-certificate.
 
+=item fingerprint_md5
+
+Hex-encoded md5 fingerprint of the certificate
+
+=item fingerprint_sha1
+
+Hex-encoded sha1 fingerprint of the certificate
+
+=item fingerprint_sha256
+
+Hex-encoded sha256 fingerprint of the certificate
+
 =back
 
 =head2 VERIFICATION FUNCTIONS
