@@ -50,6 +50,12 @@ import the certificate
 Creates a new NSS::Certificate object from the pem-encoded certificate
 string. Behaves exactly as new ( ).
 
+=item new_from_nick ( STRING )
+
+Cerates a new NSS::Certificate object from the certificate database
+given a certificate nickname. Returns undef if no fitting certificate
+could be found.
+
 =back 
 
 =head2 ACCESSORS

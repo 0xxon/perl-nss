@@ -1663,7 +1663,7 @@ new(class, string, nickSv = NO_INIT)
   char* nick = NULL;
 
   CODE:
- // SV  *class
+ // Note: nick functionality seems to not really work in NSS
  
   if ( items == 3 ) {
     nick = SvPV_nolen(nickSv);
@@ -1676,9 +1676,9 @@ new(class, string, nickSv = NO_INIT)
   }
 
   cert = CERT_NewTempCertificate(defaultDB, &item, 
-                                   "maja"     /* nickname */, 
+                                   nick     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
-           PR_TRUE  /* copyDER */);
+           			   PR_TRUE  /* copyDER */);
 
   if (!cert) {
     PRErrorCode err = PR_GetError();
@@ -1688,6 +1688,28 @@ new(class, string, nickSv = NO_INIT)
   PORT_Free(item.data);
 
   RETVAL = cert;
+
+  OUTPUT:
+  RETVAL
+
+NSS::Certificate
+new_from_nick(class, string)
+  SV* string
+
+  PREINIT:
+  CERTCertDBHandle *defaultDB;
+  char* nick = NULL;
+
+  CODE:
+  nick = SvPV_nolen(string);
+  
+  defaultDB = CERT_GetDefaultCertDB();
+
+  RETVAL = CERT_FindCertByNickname(defaultDB, nick);
+
+  if ( RETVAL == NULL ) 
+    XSRETURN_UNDEF;
+
 
   OUTPUT:
   RETVAL
