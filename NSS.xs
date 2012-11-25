@@ -27,6 +27,7 @@
 #include "ocsp.h"
 #include "keyhi.h"
 #include "secerr.h"
+#include "blapit.h"
 
 #include "nspr.h"
 #include "plgetopt.h"
@@ -984,6 +985,22 @@ issuer(crl)
   OUTPUT:
   RETVAL
 
+SV*
+version(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  int version;
+
+  CODE:
+  version = crl->crl.version.len ? DER_GetInteger(&crl->crl.version) : 0;  
+  version++;
+  RETVAL = newSViv(version);
+
+  OUTPUT:
+  RETVAL
+  
+
 void
 verify(crl, cert, timedouble = NO_INIT)
   NSS::CRL crl
@@ -1071,7 +1088,6 @@ DESTROY(crl)
 
   if ( crl ) {
     CERT_DestroyCrl(crl); 
-    printf("Destroying...\n");
     crl = 0;
   }
 
@@ -1301,7 +1317,44 @@ bit_length(cert)
   OUTPUT:
   RETVAL
 
+
+SV*
+fingerprint_md5(cert)
+  NSS::Certificate cert
+
+  ALIAS:
+  fingerprint_sha1 = 1
+  fingerprint_sha256 = 2
+
+  PREINIT:
+  SECItem item;
+  SECStatus rv;
+  unsigned char fingerprint[32];
+
+  CODE:
+
+  memset(fingerprint, 0, sizeof(fingerprint));
+  if ( ix == 0 ) {
+    rv = PK11_HashBuf(SEC_OID_MD5, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = MD5_LENGTH;
+  } else if ( ix == 1 ) {
+    rv = PK11_HashBuf(SEC_OID_SHA1, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = SHA1_LENGTH;
+  } else if ( ix == 2 ) {
+    rv = PK11_HashBuf(SEC_OID_SHA256, fingerprint, cert->derCert.data, cert->derCert.len);
+    item.len = SHA256_LENGTH;
+  }
   
+  if ( rv != SECSuccess ) {
+    croak("Could not calculate fingerprint");
+  }
+
+  item.data = fingerprint;
+  RETVAL = item_to_hhex(&item);
+
+  OUTPUT:
+  RETVAL
+
 
 SV*
 accessor(cert)
@@ -1322,6 +1375,7 @@ accessor(cert)
   key_alg_name = 13
   nickname = 14
   dbnickname = 15
+  der = 16
 
   PREINIT:
 
@@ -1337,6 +1391,8 @@ accessor(cert)
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
     RETVAL = item_to_hhex(&cert->serialNumber);
+  } else if ( ix == 16 ) {
+    RETVAL = item_to_sv(&cert->derCert);
   } else if ( ix == 7 ) {
     char * ce = CERT_GetCertificateEmailAddress(cert);
     if ( ce == NULL ) 
@@ -1835,7 +1891,7 @@ new(class, string, nickSv = NO_INIT)
   char* nick = NULL;
 
   CODE:
- // SV  *class
+ // Note: nick functionality seems to not really work in NSS
  
   if ( items == 3 ) {
     nick = SvPV_nolen(nickSv);
@@ -1848,9 +1904,9 @@ new(class, string, nickSv = NO_INIT)
   }
 
   cert = CERT_NewTempCertificate(defaultDB, &item, 
-                                   "maja"     /* nickname */, 
+                                   nick     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
-           PR_TRUE  /* copyDER */);
+           			   PR_TRUE  /* copyDER */);
 
   if (!cert) {
     PRErrorCode err = PR_GetError();
@@ -1860,6 +1916,28 @@ new(class, string, nickSv = NO_INIT)
   PORT_Free(item.data);
 
   RETVAL = cert;
+
+  OUTPUT:
+  RETVAL
+
+NSS::Certificate
+new_from_nick(class, string)
+  SV* string
+
+  PREINIT:
+  CERTCertDBHandle *defaultDB;
+  char* nick = NULL;
+
+  CODE:
+  nick = SvPV_nolen(string);
+  
+  defaultDB = CERT_GetDefaultCertDB();
+
+  RETVAL = CERT_FindCertByNickname(defaultDB, nick);
+
+  if ( RETVAL == NULL ) 
+    XSRETURN_UNDEF;
+
 
   OUTPUT:
   RETVAL

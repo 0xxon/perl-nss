@@ -50,6 +50,12 @@ import the certificate
 Creates a new NSS::Certificate object from the pem-encoded certificate
 string. Behaves exactly as new ( ).
 
+=item new_from_nick ( STRING )
+
+Cerates a new NSS::Certificate object from the certificate database
+given a certificate nickname. Returns undef if no fitting certificate
+could be found.
+
 =back 
 
 =head2 ACCESSORS
@@ -125,6 +131,22 @@ does not contain an RSA key, so check first using C<key_alg_name>.
 
 Name of the EC-curve used in the certificate. Croaks if the certificate is
 not an EC-certificate.
+
+=item fingerprint_md5
+
+Hex-encoded md5 fingerprint of the certificate
+
+=item fingerprint_sha1
+
+Hex-encoded sha1 fingerprint of the certificate
+
+=item fingerprint_sha256
+
+Hex-encoded sha256 fingerprint of the certificate
+
+=item der
+
+Return the der-encoded certificate
 
 =back
 

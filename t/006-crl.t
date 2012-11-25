@@ -4,7 +4,7 @@ use warnings;
 
 use File::Temp;
 
-use Test::More tests=>15;
+use Test::More tests=>16;
 
 my $dbdir;
 
@@ -49,6 +49,7 @@ is($icert->subject, 'CN=Example CA,DC=example,DC=com', 'subject');
 ok($crl->verify_db(1104537600), 'verify_db');
 ok(!$crl->verify_db, 'verify_db');
 is($crl->issuer, 'CN=Example CA,DC=example,DC=com', 'issuer');
+ok($crl->version == 2, 'crl version is 2');
 
 sub slurp {
   local $/=undef;
