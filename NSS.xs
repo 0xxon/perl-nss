@@ -1275,6 +1275,7 @@ accessor(cert)
   key_alg_name = 13
   nickname = 14
   dbnickname = 15
+  der = 16
 
   PREINIT:
 
@@ -1290,6 +1291,8 @@ accessor(cert)
     RETVAL = newSVpvf("%s", cert->issuerName);
   } else if ( ix == 3 ) {
     RETVAL = item_to_hhex(&cert->serialNumber);
+  } else if ( ix == 16 ) {
+    RETVAL = item_to_sv(&cert->derCert);
   } else if ( ix == 7 ) {
     char * ce = CERT_GetCertificateEmailAddress(cert);
     if ( ce == NULL ) 
