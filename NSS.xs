@@ -885,6 +885,22 @@ issuer(crl)
   OUTPUT:
   RETVAL
 
+SV*
+version(crl)
+  NSS::CRL crl
+
+  PREINIT:
+  int version;
+
+  CODE:
+  version = crl->crl.version.len ? DER_GetInteger(&crl->crl.version) : 0;  
+  version++;
+  RETVAL = newSViv(version);
+
+  OUTPUT:
+  RETVAL
+  
+
 void
 verify(crl, cert, timedouble = NO_INIT)
   NSS::CRL crl
@@ -972,7 +988,6 @@ DESTROY(crl)
 
   if ( crl ) {
     CERT_DestroyCrl(crl); 
-    printf("Destroying...\n");
     crl = 0;
   }
 

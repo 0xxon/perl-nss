@@ -46,6 +46,10 @@ certificate string.
 
 Returns the CRL issuer as a string.
 
+=item version
+
+Returns the CRL version
+
 =item find_issuer ( [ time ] ) 
 
 Returns the NSS::Certificate object, where the subject matches
