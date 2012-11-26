@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -42,7 +43,6 @@
 typedef CERTCertificate* NSS__Certificate;
 typedef CERTCertList* NSS__CertList;
 typedef CERTSignedCrl* NSS__CRL;
-typedef CERTCrlEntry* NSS__CRL__Entry;
 
 char* initstring;
 
@@ -162,7 +162,7 @@ FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
 // want to use THAT for?
 
 static
-SV* OidToSV(SECItem *oid)
+SV* oid_to_sv(SECItem *oid)
 {
   SECOidTag oidTag = SECOID_FindOIDTag(oid);
   const char* out = 0;
@@ -508,6 +508,9 @@ SV* OidToSV(SECItem *oid)
   case SEC_OID_SECG_EC_SECT571R1:
     out = "ECsect571r1";
     break;
+  case SEC_OID_X509_REASON_CODE:
+    out = "revocationReason";
+    break;
   default: {
  /*
     if (oidTag == SEC_OID(MS_CERT_EXT_CERTTYPE)) {
@@ -581,6 +584,8 @@ static HV* node_to_hv(CERTVerifyLogNode* node) {
   return out;
 }
 
+
+
 static
 SV* item_to_hex(SECItem *data) {
   // do it like mozilla - if data <= 4 -> make integger
@@ -633,6 +638,130 @@ static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
 
 static SV* item_to_sv(SECItem* item) {
   return newSVpvn((const char*) item->data, item->len);
+}
+
+static
+bool strip_tag_and_length(SECItem *i)
+{
+  unsigned int start;
+
+  if (!i || !i->data || i->len < 2) { /* must be at least tag and length */
+    return false;
+  }
+  start = ((i->data[1] & 0x80) ? (i->data[1] & 0x7f) + 2 : 2);
+  if (i->len < start) {
+    return false;
+  }
+  i->data += start;
+  i->len  -= start;
+  return true;
+}
+
+static
+SV*
+universal_to_sv(SECItem* item) {
+  switch (item->data[0] & SEC_ASN1_TAGNUM_MASK) {
+    case SEC_ASN1_ENUMERATED:
+    case SEC_ASN1_INTEGER:
+      strip_tag_and_length(item) ? : croak("could not strip tag and length");
+      return item_to_hex(item); // item_to_hex returns ints for data <=4
+    case SEC_ASN1_OBJECT_ID: {
+      strip_tag_and_length(item) ? : croak("could not strip tag and length");
+      char* oidchar = CERT_GetOidString(item);
+      SV* oidstr = newSVpv(oidchar, 0);
+      PR_smprintf_free(oidchar);
+      return oidstr;
+    }
+    case SEC_ASN1_BOOLEAN: {
+      int val = 0;
+      if ( !strip_tag_and_length(item) ) {
+        return &PL_sv_no; // guessing here...
+      }
+      if ( item->data && item->len ) {
+        val = item->data[0];
+      }
+
+      if ( val ) 
+        return &PL_sv_yes;
+      else
+        return &PL_sv_no;
+    }
+    case SEC_ASN1_UTF8_STRING:
+    case SEC_ASN1_PRINTABLE_STRING:
+    case SEC_ASN1_VISIBLE_STRING:
+    case SEC_ASN1_IA5_STRING:
+    case SEC_ASN1_T61_STRING:
+      croak("String not implemented");
+      break;
+    case SEC_ASN1_GENERALIZED_TIME:
+      croak("Time not implemented");
+      break;
+    case SEC_ASN1_UTC_TIME:
+      croak("UTCTime not implemented");
+      break;
+    case SEC_ASN1_NULL:
+      return &PL_sv_undef;
+     case SEC_ASN1_SET:
+     case SEC_ASN1_SEQUENCE:
+      croak("SET, Sequence not implemented");
+      break;
+    case SEC_ASN1_OCTET_STRING:
+      croak("Octet string not implemented");
+      break;
+    case SEC_ASN1_BIT_STRING:
+      croak("Bit string not implemented");
+      break;
+    case SEC_ASN1_BMP_STRING:
+      croak("BMP String not implemented");
+      break;
+    case SEC_ASN1_UNIVERSAL_STRING:
+      croak("Universal String not implemented");
+      break; 
+    default:
+      return item_to_hhex(item);
+      break;
+  }
+
+  return 0;
+}
+
+static
+SV* item_to_sv_parsed(SECItem* i) {
+  if ( !( i && i->len && i->data ) ) {
+    croak("Empty item");
+  }
+
+  switch ( i->data[0] & SEC_ASN1_CLASS_MASK ) {
+    case SEC_ASN1_CONTEXT_SPECIFIC:
+     croak("Cannot parse context specific");
+    case SEC_ASN1_UNIVERSAL:
+      return universal_to_sv(i);
+    default:
+      return item_to_hhex(i);
+  }
+
+}
+
+static
+SV* extension_to_sv(CERTCertExtension *extension) {
+  SECOidTag oidTag;
+  SV* out = 0;
+
+  oidTag = SECOID_FindOIDTag (&extension->id);
+
+
+  switch ( oidTag ) {
+    case SEC_OID_X509_REASON_CODE:
+      return item_to_sv_parsed(&extension->value);
+
+    default: {
+      char* oidchar = CERT_GetOidString(&extension->id);
+      croak("Could not parse extension %s", oidchar);
+      PR_smprintf_free(oidchar); // memleak because this is never executed"
+    }
+  }
+
+  return out;
 }
 
 MODULE = NSS    PACKAGE = NSS
@@ -1001,31 +1130,54 @@ entries(crl)
   int iv;
 
   PPCODE:
-  // this is unsafe, because entries only live as long as the crl lives.
-  //
-  // the entries would have to increment the refcount of the crl - implement this sometime.
   if ( crl->crl.entries != NULL ) {
     iv = 0;
     while( (entry = crl->crl.entries[iv++]) != NULL) {
-      SvREFCNT_inc_void(crl); // every entry needs the crl to be present - otherwhise the arena containing it might be freed.
-      SV* e = newSV(0);
-      sv_setref_pv(e, "NSS::CRL::Entry", entry);
-      mXPUSHs(e);
+      HV* h = newHV();
+
+      hv_store(h, "serial", 6, item_to_hhex(&entry->serialNumber), 0) ? : croak("Could not store data in hv");
+
+      {
+        // TODO: factor out to time_to_sv
+        int64 time;
+        SECStatus rv;
+        char *timeString;
+        PRExplodedTime printableTime; 
+	SV* timeSV;
+
+	rv = DER_UTCTimeToTime(&time, &(entry->revocationDate));
+
+        if (rv != SECSuccess)
+          croak("Could not parse CRL element revocation time");
+
+        PR_ExplodeTime(time, PR_GMTParameters, &printableTime);
+        timeString = PORT_Alloc(256);
+        if ( ! PR_FormatTime(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
+          croak("Could not format time string");
+        }
+
+        timeSV = newSVpvf("%s", timeString);
+
+        hv_store(h, "revocationDate", 14, timeSV, 0) ? : croak("Could not store data in hv");
+      }
+
+      {
+        CERTCertExtension **extensions = entry->extensions;
+	if ( extensions ) {
+	  while ( *extensions ) {
+	    hv_store_ent(h, oid_to_sv(&(*extensions)->id), extension_to_sv(*extensions), 0) ? : croak("Could not store data in hv");
+
+	    extensions++;
+	  }
+	}
+
+      }
+
+      mXPUSHs(newRV ((SV*)h) );
     }
   }
 
-MODULE = NSS    PACKAGE = NSS::CRL::Entry
 
-SV* 
-serial(entry)
-  NSS::CRL::Entry entry
-
-  CODE:
-  RETVAL = item_to_hhex(&entry->serialNumber);  
-
-  OUTPUT:
-  RETVAL
-    
 MODULE = NSS    PACKAGE = NSS::CertList
 
 NSS::CertList
@@ -1127,7 +1279,7 @@ curve(cert)
     croak("Unknown EC-key");
   }
 
-  RETVAL = OidToSV(&oid);
+  RETVAL = oid_to_sv(&oid);
 
   SECKEY_DestroyPublicKey(key);
   
@@ -1314,9 +1466,9 @@ accessor(cert)
       XSRETURN_NO;
     }
   } else if ( ix == 12 ) {
-    RETVAL = OidToSV(&cert->signature.algorithm);
+    RETVAL = oid_to_sv(&cert->signature.algorithm);
   } else if ( ix == 13 ) {
-    RETVAL = OidToSV(&cert->subjectPublicKeyInfo.algorithm.algorithm);
+    RETVAL = oid_to_sv(&cert->subjectPublicKeyInfo.algorithm.algorithm);
   } else if ( ix == 5 || ix == 6 ) {
     int64 time;
     SECStatus rv;

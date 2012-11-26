@@ -4,7 +4,7 @@ use warnings;
 
 use File::Temp;
 
-use Test::More tests=>16;
+use Test::More tests=>18;
 
 my $dbdir;
 
@@ -36,7 +36,9 @@ ok(!$crl->verify($thawte, 1104537600), 'verify crl');
 
 my @entries = $crl->entries;
 ok(scalar @entries == 1, '1 entry');
-ok($entries[0]->serial == 12, 'crl entry serial');
+ok($entries[0]->{serial} == 12, 'crl entry serial');
+is($entries[0]->{revocationDate}, 'Fri Nov 19 15:57:03 2004', 'crl entry revocation date');
+ok($entries[0]->{revocationReason} == 1, 'crl revocation reason');
 
 # well, issuer finding only works if the issuer is in the db...
 # and trust is. Because, what is the world without trust...

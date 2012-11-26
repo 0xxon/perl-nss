@@ -1,5 +1,4 @@
 NSS::Certificate T_PTROBJ
 NSS::CertList T_PTROBJ
 NSS::CRL T_PTROBJ
-NSS::CRL::Entry T_PTROBJ
 
