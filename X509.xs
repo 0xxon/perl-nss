@@ -40,9 +40,9 @@
 
 
 /* fake our package name */
-typedef CERTCertificate* NSS__Certificate;
-typedef CERTCertList* NSS__CertList;
-typedef CERTSignedCrl* NSS__CRL;
+typedef CERTCertificate* Crypt__NSS__X509__Certificate;
+typedef CERTCertList* Crypt__NSS__X509__CertList;
+typedef CERTSignedCrl* Crypt__NSS__X509__CRL;
 
 char* initstring;
 
@@ -577,7 +577,7 @@ static HV* node_to_hv(CERTVerifyLogNode* node) {
   if ( node->cert ) {
     SV* cert = newSV(0);
 
-    sv_setref_pv(cert, "NSS::Certificate", node->cert); // the beauty of this is that it should be cleaned by perl refcounting now
+    sv_setref_pv(cert, "Crypt::NSS::X509::Certificate", node->cert); // the beauty of this is that it should be cleaned by perl refcounting now
     hv_stores(out, "certificate", cert)  ? : croak("Could not store data in hv");
   }
 
@@ -764,13 +764,13 @@ SV* extension_to_sv(CERTCertExtension *extension) {
   return out;
 }
 
-MODULE = NSS    PACKAGE = NSS
+MODULE = Crypt::NSS::X509    PACKAGE = Crypt::NSS::X509
 
 PROTOTYPES: DISABLE
 
 BOOT:
 {
-  HV *stash = gv_stashpvn("NSS", 3, TRUE);
+  HV *stash = gv_stashpvn("Crypt::NSS::X509", 16, TRUE);
 
   struct { char *n; I32 s; } NSS__const[] = {
 
@@ -867,7 +867,7 @@ __cleanup(void)
 
 SV*
 add_cert_to_db(cert, string)
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
   SV* string;
 
   ALIAS:
@@ -964,9 +964,9 @@ dump_certificate_cache_info()
   nss_DumpCertificateCacheInfo();
 
 
-MODULE = NSS    PACKAGE = NSS::CRL
+MODULE = Crypt::NSS::X509    PACKAGE = Crypt::NSS::X509::CRL
 
-NSS::CRL
+Crypt::NSS::X509::CRL
 new_from_der(class, string)
   SV* string
 
@@ -999,7 +999,7 @@ new_from_der(class, string)
 
 SV*
 issuer(crl)
-  NSS::CRL crl
+  Crypt::NSS::X509::CRL crl
 
   PREINIT:
   char* c;
@@ -1016,7 +1016,7 @@ issuer(crl)
 
 SV*
 version(crl)
-  NSS::CRL crl
+  Crypt::NSS::X509::CRL crl
 
   PREINIT:
   int version;
@@ -1032,8 +1032,8 @@ version(crl)
 
 void
 verify(crl, cert, timedouble = NO_INIT)
-  NSS::CRL crl
-  NSS::Certificate cert
+  Crypt::NSS::X509::CRL crl
+  Crypt::NSS::X509::Certificate cert
   SV* timedouble
 
   PREINIT:
@@ -1058,9 +1058,9 @@ verify(crl, cert, timedouble = NO_INIT)
 
   XSRETURN_YES;
 
-NSS::Certificate
+Crypt::NSS::X509::Certificate
 find_issuer(crl, timedouble = NO_INIT)
-  NSS::CRL crl
+  Crypt::NSS::X509::CRL crl
   SV* timedouble
 
   ALIAS:
@@ -1111,7 +1111,7 @@ find_issuer(crl, timedouble = NO_INIT)
 
 void 
 DESTROY(crl)
-  NSS::CRL crl
+  Crypt::NSS::X509::CRL crl
 
   PPCODE:
 
@@ -1123,7 +1123,7 @@ DESTROY(crl)
 
 void
 entries(crl)
-  NSS::CRL crl
+  Crypt::NSS::X509::CRL crl
 
   PREINIT:
   CERTCrlEntry *entry;
@@ -1178,9 +1178,9 @@ entries(crl)
   }
 
 
-MODULE = NSS    PACKAGE = NSS::CertList
+MODULE = Crypt::NSS::X509    PACKAGE = Crypt::NSS::X509::CertList
 
-NSS::CertList
+Crypt::NSS::X509::CertList
 new(class)
 
   PREINIT:
@@ -1196,8 +1196,8 @@ new(class)
 
 void
 add(certlist, cert)
-  NSS::CertList certlist;
-  NSS::Certificate cert;
+  Crypt::NSS::X509::CertList certlist;
+  Crypt::NSS::X509::Certificate cert;
 
   CODE:
   CERTCertificate* addcert = CERT_DupCertificate(cert);
@@ -1206,7 +1206,7 @@ add(certlist, cert)
 
 void
 dump(certlist)
-  NSS::CertList certlist;
+  Crypt::NSS::X509::CertList certlist;
 
   PREINIT:
   CERTCertListNode *node;
@@ -1220,7 +1220,7 @@ dump(certlist)
       CERTCertificate* currcert = CERT_DupCertificate(node->cert);
       SV* cert = newSV(0);
 
-      sv_setref_pv(cert, "NSS::Certificate", currcert); // the beauty of this is that it should be cleaned by perl refcounting now
+      sv_setref_pv(cert, "Crypt::NSS::X509::Certificate", currcert); // the beauty of this is that it should be cleaned by perl refcounting now
       mXPUSHs(cert);
     } else {
       croak("Bad certificate list, encountered node without cert.");
@@ -1232,7 +1232,7 @@ dump(certlist)
 
 void 
 DESTROY(certlist)
-  NSS::CertList certlist;
+  Crypt::NSS::X509::CertList certlist;
 
   PPCODE:
 
@@ -1242,12 +1242,12 @@ DESTROY(certlist)
   }
 
 
-MODULE = NSS    PACKAGE = NSS::Certificate
+MODULE = Crypt::NSS::X509    PACKAGE = Crypt::NSS::X509::Certificate
 
 
 SV*
 curve(cert)
-  NSS::Certificate cert
+  Crypt::NSS::X509::Certificate cert
 
   PREINIT:
   SECKEYPublicKey *key;
@@ -1288,7 +1288,7 @@ curve(cert)
     
 SV*
 raw_spki(cert)
-  NSS::Certificate cert
+  Crypt::NSS::X509::Certificate cert
 
   PREINIT:
   SV* out;
@@ -1303,7 +1303,7 @@ raw_spki(cert)
 
 SV*
 bit_length(cert)
-  NSS::Certificate cert
+  Crypt::NSS::X509::Certificate cert
   
   ALIAS:
   modulus = 1
@@ -1372,7 +1372,7 @@ bit_length(cert)
 
 SV*
 fingerprint_md5(cert)
-  NSS::Certificate cert
+  Crypt::NSS::X509::Certificate cert
 
   ALIAS:
   fingerprint_sha1 = 1
@@ -1410,7 +1410,7 @@ fingerprint_md5(cert)
 
 SV*
 accessor(cert)
-  NSS::Certificate cert  
+  Crypt::NSS::X509::Certificate cert  
 
   ALIAS:
   subject = 1
@@ -1569,7 +1569,7 @@ accessor(cert)
 
 void
 verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
   SV* timedouble;
   I32 usage;
 
@@ -1662,7 +1662,7 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   
 
 SV* match_name(cert, string)
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
   SV* string;
 
   PREINIT:
@@ -1685,10 +1685,10 @@ SV* match_name(cert, string)
 
 SV*
 verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertList = NO_INIT)
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
   SV* timedouble;
   I32 usage;
-  NSS::CertList trustedCertList;
+  Crypt::NSS::X509::CertList trustedCertList;
 
   ALIAS:
   verify_pkix_aia = 1
@@ -1787,9 +1787,9 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   RETVAL
 
 
-NSS::CertList
+Crypt::NSS::X509::CertList
 get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer) 
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
   I32 usage;  
   SV* timedouble;
 
@@ -1819,7 +1819,7 @@ get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   OUTPUT: 
   RETVAL
 
-NSS::Certificate
+Crypt::NSS::X509::Certificate
 new(class, string, nickSv = NO_INIT)
   SV  *string
   SV  *nickSv
@@ -1862,7 +1862,7 @@ new(class, string, nickSv = NO_INIT)
   OUTPUT:
   RETVAL
 
-NSS::Certificate
+Crypt::NSS::X509::Certificate
 new_from_nick(class, string)
   SV* string
 
@@ -1886,7 +1886,7 @@ new_from_nick(class, string)
 
 
 void DESTROY(cert)
-  NSS::Certificate cert;
+  Crypt::NSS::X509::Certificate cert;
 
   PPCODE:
 

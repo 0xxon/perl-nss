@@ -1,4 +1,4 @@
-NSS::Certificate T_PTROBJ
-NSS::CertList T_PTROBJ
-NSS::CRL T_PTROBJ
+Crypt::NSS::X509::Certificate T_PTROBJ
+Crypt::NSS::X509::CertList T_PTROBJ
+Crypt::NSS::X509::CRL T_PTROBJ
 

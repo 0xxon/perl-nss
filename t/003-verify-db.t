@@ -16,15 +16,15 @@ BEGIN {
 	# use a temporary directory for our database...
 	$dbdir = File::Temp->newdir();
 
-	use_ok( 'NSS', (':dbpath', $dbdir) );
+	use_ok( 'Crypt::NSS::X509', (':dbpath', $dbdir) );
 }
 
 # load root certificates to db
-NSS->load_rootlist('certs/root.ca');
+Crypt::NSS::X509->load_rootlist('certs/root.ca');
 
 {
-	my $selfsigned = NSS::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
-	isa_ok($selfsigned, 'NSS::Certificate');
+	my $selfsigned = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
+	isa_ok($selfsigned, 'Crypt::NSS::X509::Certificate');
 	# lol. The different verify operatins give different 
 	is($selfsigned->verify_pkix($vfytime), -8179, 'no verify');
 	is($selfsigned->verify_cert($vfytime), -8172, 'no verify');
@@ -33,8 +33,8 @@ NSS->load_rootlist('certs/root.ca');
 }
 
 {
-	my $rapidssl = NSS::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
-	isa_ok($rapidssl, 'NSS::Certificate');
+	my $rapidssl = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/rapidssl.crt'));
+	isa_ok($rapidssl, 'Crypt::NSS::X509::Certificate');
 	is($rapidssl->verify_pkix($vfytime), 1, 'verify');
 	is($rapidssl->verify_cert($vfytime), 1, 'verify');
 	is($rapidssl->verify_certificate($vfytime), 1, 'verify');
@@ -52,8 +52,8 @@ NSS->load_rootlist('certs/root.ca');
 # chain verification
 
 {
-	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-	isa_ok($google, 'NSS::Certificate');
+	my $google = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'Crypt::NSS::X509::Certificate');
 	# something they agree on. At last.
 	is($google->verify_pkix($vfytime), -8179, 'no verify');
 	is($google->verify_cert($vfytime), -8179, 'no verify');
@@ -63,8 +63,8 @@ NSS->load_rootlist('certs/root.ca');
 	# but when we load the thawte intermediate cert too it verifes...
 	
 	{
-		my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
-		isa_ok($thawte, 'NSS::Certificate');
+		my $thawte = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/thawte.crt'));
+		isa_ok($thawte, 'Crypt::NSS::X509::Certificate');
 		is($google->verify_pkix($vfytime), 1, 'verify with added thawte');
 		is($google->verify_cert($vfytime), 1, 'verify with added thawte');
 		is($google->verify_certificate($vfytime), 1, 'verify with added thawte');
@@ -88,12 +88,12 @@ NSS->load_rootlist('certs/root.ca');
 # be aware of this trickery...
 # I guess this is a memory-leak on my part, but I do absolutely not know where
 
-# Dirty fix: reinit NSS
-NSS::_reinit();
+# Dirty fix: reinit Crypt::NSS::X509
+Crypt::NSS::X509::_reinit();
 
 {
-	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-	isa_ok($google, 'NSS::Certificate');
+	my $google = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'Crypt::NSS::X509::Certificate');
 	is($google->verify_pkix($vfytime), -8179, 'no verify');
 	is($google->verify_cert($vfytime), -8179, 'no verify');
 	is($google->verify_certificate($vfytime), -8179, 'no verify');
@@ -102,13 +102,13 @@ NSS::_reinit();
 
 {
 	# now, let's add the thawte-cert to the db
-	my $thawte = NSS::Certificate->new_from_pem(slurp('certs/thawte.crt'));
-	isa_ok($thawte, 'NSS::Certificate');
-	NSS::add_cert_to_db($thawte, $thawte->subject);
-	is($thawte->verify_pkix($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
-	is($thawte->verify_cert($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
-	is($thawte->verify_certificate($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
-	is($thawte->verify_certificate_pkix($vfytime, NSS::certUsageAnyCA), 1, 'verify ca');
+	my $thawte = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/thawte.crt'));
+	isa_ok($thawte, 'Crypt::NSS::X509::Certificate');
+	Crypt::NSS::X509::add_cert_to_db($thawte, $thawte->subject);
+	is($thawte->verify_pkix($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_cert($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_certificate($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
+	is($thawte->verify_certificate_pkix($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
 	
 	is($thawte->verify_pkix($vfytime), -8102, 'verify ca');
 	is($thawte->verify_cert($vfytime), -8102, 'verify ca');
@@ -116,14 +116,14 @@ NSS::_reinit();
 	is($thawte->verify_certificate_pkix($vfytime), -8102, 'verify ca');
 }
 
-# kill NSS again
+# kill Crypt::NSS::X509 again
 #
-NSS::_reinit();
+Crypt::NSS::X509::_reinit();
 
 # and this time it should validate
 {
-	my $google = NSS::Certificate->new_from_pem(slurp('certs/google.crt'));
-	isa_ok($google, 'NSS::Certificate');
+	my $google = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/google.crt'));
+	isa_ok($google, 'Crypt::NSS::X509::Certificate');
 	is($google->verify_pkix($vfytime), 1, 'verify');
 	is($google->verify_cert($vfytime), 1, 'verify');
 	is($google->verify_certificate($vfytime), 1, 'verify');

@@ -1,4 +1,4 @@
-package NSS;
+package Crypt::NSS::X509;
 
 use strict;
 
@@ -42,7 +42,7 @@ sub load_rootlist {
 
 			if ( $line =~ /--END CERTIFICATE--/ ) {
 				#say "|$pem|";
-				my $cert = NSS::Certificate->new_from_pem($pem);
+				my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 				$pem = "";
 				add_trusted_cert_to_db($cert, $cert->subject);
 			}
@@ -90,7 +90,7 @@ END {
   __PACKAGE__->__cleanup;
 }
 
-package NSS::CRL;
+package Crypt::NSS::X509::CRL;
 
 sub new_from_pem {
 	my $class = shift;
@@ -107,12 +107,12 @@ sub new_from_pem {
 	return $class->new_from_der($der, @_);
 }
 
-package NSS::CertList;
+package Crypt::NSS::X509::CertList;
 
 sub new_from_rootlist {
 	my ($class, $filename) = @_;
 
-	my $certlist = NSS::CertList->new();
+	my $certlist = Crypt::NSS::X509::CertList->new();
 
 	my $pem;
 
@@ -124,7 +124,7 @@ sub new_from_rootlist {
 
 			if ( $line =~ /--END CERTIFICATE--/ ) {
 				#say "|$pem|";
-				my $cert = NSS::Certificate->new_from_pem($pem);
+				my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 				$pem = "";
 				$certlist->add($cert);
 			}
@@ -136,7 +136,7 @@ sub new_from_rootlist {
 	return $certlist;
 }
 
-package NSS::Certificate;
+package Crypt::NSS::X509::Certificate;
 use MIME::Base64 ();
 
 sub new_from_pem {

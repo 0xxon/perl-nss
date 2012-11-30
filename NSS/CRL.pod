@@ -1,16 +1,16 @@
 =head1 NAME
 
-NSS::CRL - NSS CRL
+Crypt::NSS::X509::CRL - NSS CRL
 
 =head1 SYNOPSIS
 
   use 5.10.1;
   use Perl6::Slurp;
 
-  use NSS;
+  use Crypt::NSS::X509;
 
-  my $crl = NSS::Certificate->new(slurp('derfile'));
-  my $cert = NSS::Certificate->new_from_der(slurp('derfile'));
+  my $crl = Crypt::NSS::X509::Certificate->new(slurp('derfile'));
+  my $cert = Crypt::NSS::X509::Certificate->new_from_der(slurp('derfile'));
 
   my $crlvalid = $crl->verify($cert);   
   my @revokedserials = map { $_->serial } $crl->entries;
@@ -63,7 +63,7 @@ Returns true on success, false otherwise.
 
 =item entries
 
-Returns the CRL entries.
+Returns the CRL entries as an array of hash-references.
 
 =back
 

@@ -1,22 +1,22 @@
 =head1 NAME
 
-NSS::CertList - NSS Certificate lists
+Crypt::NSS::X509::CertList - NSS Certificate lists
 
 =head1 SYNOPSIS
 
   use 5.10.1;
   use Perl6::Slurp;
 
-  use NSS;
+  use Crypt::NSS::X509;
 
   # create a certificate list
-  my $certList = NSS::CertList->new();
+  my $certList = Crypt::NSS::X509::CertList->new();
 
   # add a NSS::Certificate to the list
   $certList->add($certificate);
 
   # verify with trusted certificate list
-  my $res = $cert->verify_pkix(time, NSS::certUsageSSLServer, $certList);
+  my $res = $cert->verify_pkix(time, Crypt::NSS::X509::certUsageSSLServer, $certList);
 
   # get NSS::Certificate objects in lst
   my @certs = $certList->dump();
@@ -38,15 +38,15 @@ returned by a few functions.
 
 =item B<new>
 
-Create a new, empty C<CSS::CertList>
+Create a new, empty C<Crypt::NSS::X509::CertList>
 
 =item B<add ( CERTIFICATE )>
 
-Add a C<NSS::Certificate> to the certificate list
+Add a C<Crypt::NSS::X509::Certificate> to the certificate list
 
 =item B<dump>
 
-Returns all C<NSS::Certificate>s that are in the certificate list as an array.
+Returns all C<Crypt::NSS::X509::Certificate>s that are in the certificate list as an array.
 
 =back
 

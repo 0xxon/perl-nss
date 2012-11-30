@@ -4,15 +4,15 @@ use warnings;
 
 use Test::More tests=>52;
 
-BEGIN { use_ok( 'NSS' ); }
+BEGIN { use_ok( 'Crypt::NSS::X509' ); }
 
 diag('Selfsigned certificate');
 
 {
 	my $pem = slurp("certs/selfsigned.crt");
-	my $cert = NSS::Certificate->new_from_pem($pem);
+	my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 
-	isa_ok($cert, 'NSS::Certificate');
+	isa_ok($cert, 'Crypt::NSS::X509::Certificate');
 	is($cert->issuer, 'E=email@domain.invalid,CN=Test Certificate,OU=Test Unit,L=Berkeley,ST=California,C=US', 'issuer');
 	is($cert->subject, 'E=email@domain.invalid,CN=Test Certificate,OU=Test Unit,L=Berkeley,ST=California,C=US', 'subject');
 	ok($cert->version == 1, 'version == 1');
@@ -35,9 +35,9 @@ diag('Selfsigned certificate');
 diag('Google certificate');
 {
 	my $pem = slurp("certs/google.crt");
-	my $cert = NSS::Certificate->new_from_pem($pem, "google");
+	my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem, "google");
 
-	isa_ok($cert, 'NSS::Certificate');
+	isa_ok($cert, 'Crypt::NSS::X509::Certificate');
 	is($cert->issuer, 'CN=Thawte SGC CA,O=Thawte Consulting (Pty) Ltd.,C=ZA', 'issuer');
 	is($cert->subject, 'CN=www.google.com,O=Google Inc,L=Mountain View,ST=California,C=US', 'subject');
 	ok($cert->version == 3, 'version == 3');
@@ -60,9 +60,9 @@ diag('Google certificate');
 diag('Thawte EC-root certificate');
 {
 	my $pem = slurp("certs/thawte-ec.crt");
-	my $cert = NSS::Certificate->new_from_pem($pem);
+	my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 	
-	isa_ok($cert, 'NSS::Certificate');
+	isa_ok($cert, 'Crypt::NSS::X509::Certificate');
 	is($cert->sig_alg_name, "AnsiX962ECDsaSignatureWithSha384", 'AnsiX962ECDsaSignatureWithSha384');
 	is($cert->key_alg_name, "ECPublicKey", 'ECPublicKey');
 	ok($cert->bit_length == 384, 'bit_length == 384');
@@ -77,9 +77,9 @@ diag('NIST DSA test-certificate');
 
 {
 	my $pem = slurp("certs/nist-dsa.crt");
-	my $cert = NSS::Certificate->new_from_pem($pem);
+	my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 	
-	isa_ok($cert, 'NSS::Certificate');
+	isa_ok($cert, 'Crypt::NSS::X509::Certificate');
 	is($cert->sig_alg_name, "AnsiX9DsaSignatureWithSha1", 'AnsiX9DsaSignatureWithSha1');
 	is($cert->key_alg_name, "AnsiX9DsaSignature", 'AnsiX9DsaSignature');
 	ok($cert->bit_length == 1024, 'bit_length == 1024');

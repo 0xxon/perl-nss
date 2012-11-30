@@ -1,15 +1,15 @@
 =head1 NAME
 
-NSS - Perl interface for the certificate handling parts of the NSS api.
+Crypt::NSS::X509 - Perl interface for the certificate handling parts of the NSS api.
 
 =head1 SYNOPSIS
 
   use 5.10.1;
   use Perl6::Slurp;
 
-  use NSS;
+  use Crypt::X509::NSS;
 
-  my $cert = NSS::Certificate->new(slurp('derfile'));
+  my $cert = Crypt::X509::NSS::Certificate->new(slurp('derfile'));
 
   say $cert->subject();
   say $cert->issuer();
@@ -39,7 +39,7 @@ Please note that this is a very early version of the library, the interface
 API will change.
 
 This document just describes the NSS class and how to load it; for certificate
-parsing you probably want to refer to L<NSS::Certificate>
+parsing you probably want to refer to L<Crypt::NSS::X509::Certificate>
 
 =head2 EXPORT
 
@@ -73,7 +73,7 @@ Note that all functions are called as B<functions, not methods>.
 
 =over 4
 
-=item B<NSS::load_rootlist($filename)>
+=item B<Crypt::NSS::X509::load_rootlist($filename)>
 
 This function reads a list of pem-formatted certificates from C<$filename>.
 The certificates are then loaded into the NSS database and marked as valid,
@@ -81,23 +81,23 @@ trusted root-certificates.
 
 Note that this function requires a NSS database.
 
-=item B<NSS::add_cert_to_db($cert, $nick)>
+=item B<Crypt::NSS::X509::add_cert_to_db($cert, $nick)>
 
-This function adds a specified C<NSS::Certificate> to the active NSS database
+This function adds a specified C<Crypt::NSS::X509::Certificate> to the active NSS database
 and stores it using the nickname C<$nick>.
 
-=item B<NSS::add_trusted_cert_to_db($cert, $nick)>
+=item B<Crypt::NSS::X509::add_trusted_cert_to_db($cert, $nick)>
 
-This function adds a specified C<NSS::Certificate> to the active NSS database
+This function adds a specified C<Crypt::NSS::X509::Certificate> to the active NSS database
 and stores it using the nickname c<$nick>. The certificate is marked as trusted
-for all purposes. Used by C<NSS::load_rootlist> to add the certificates.
+for all purposes. Used by C<Crypt::NSS::X509::load_rootlist> to add the certificates.
 
-=item B<NSS::dump_certificate_cache_info()>
+=item B<Crypt::NSS::X509::dump_certificate_cache_info()>
 
 This function dumps the current contents of the NSS certificate cache and
 the NSS temporary certificate store to the standard output
 
-=item B<NSS::_reinit()>
+=item B<Crypt::NSS::X509::_reinit()>
 
 This function shuts down the NSS library and reinitialized it again with the
 exact same parameters. Do not use this if you do not absolutely know what

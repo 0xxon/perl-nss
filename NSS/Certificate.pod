@@ -1,15 +1,15 @@
 =head1 NAME
 
-NSS::Certificate - NSS Certificate functions
+Crypt::NSS::X509::Certificate - NSS Certificate functions
 
 =head1 SYNOPSIS
 
   use 5.10.1;
   use Perl6::Slurp;
 
-  use NSS;
+  use Crypt::NSS::X509;
 
-  my $cert = NSS::Certificate->new(slurp('derfile'));
+  my $cert = Crypt::NSS::X509::Certificate->new(slurp('derfile'));
 
   say $cert->subject();
   say $cert->issuer();
@@ -29,7 +29,7 @@ Perl interface for the certificate access parts of the NSS API.
 
 This class gives access to most of the certificate handling 
 functions of NSS. For information on how to load and initialize the
-NSS library, please refer to L<NSS>.
+NSS library, please refer to L<Crypt::NSS::X509>.
 
 =head1 FUNCTIONS
 
@@ -154,7 +154,7 @@ Return the der-encoded certificate
 
 These functions allow verification of certificate chains. Please note that
 for most of them a database has to be used and a root-certificate list has
-to be loaded. See L<NSS>.
+to be loaded. See L<Crypt::NSS::X509>.
 
 There are several diffferent verification functions, because the NSS
 library offers a variety of methods to validate certificates. You probably
@@ -225,7 +225,7 @@ the Authority Information Access (AIA) field in the certificate (if present).
 
 =item get_cert_chain_from_cert( [TIME], [USAGE] ) 
 
-Get a L<NSS::CertList> containing the certificate chain up to a root-certificate
+Get a L<Crypt::NSS::X509::CertList> containing the certificate chain up to a root-certificate
 for the current certificate.
 
 =back
