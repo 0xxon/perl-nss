@@ -1,6 +1,7 @@
 package Crypt::NSS::X509;
 
 use strict;
+use warnings;
 
 use 5.10.1;
 
@@ -11,7 +12,7 @@ use base qw(Exporter);
 use autodie qw(open close);
 use Carp;
 
-$VERSION = '0.1';
+$VERSION = '0.01_1';
 
 @EXPORT_OK = qw(
 );

@@ -1,0 +1,11 @@
+#!include_default
+
+.*\.swp
+.DS_Store
+
+\.git
+
+X509.bs
+X509.c
+X509.o
+
