@@ -16,7 +16,7 @@ use Crypt::NSS::X509::Certificate;
 use Crypt::NSS::X509::CertList;
 use Crypt::NSS::X509::CRL;
 
-$VERSION = '0.01_2';
+$VERSION = '0.01';
 
 @EXPORT_OK = qw(
 );
