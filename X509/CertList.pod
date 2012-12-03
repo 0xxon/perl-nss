@@ -22,7 +22,7 @@ Crypt::NSS::X509::CertList - NSS Certificate lists
   my @certs = $certList->dump();
 
 
-=head1 ABSRACT
+=head1 ABSTRACT
 
 Perl interface to NSS Certificate Lists
 

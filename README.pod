@@ -57,7 +57,7 @@ It is not possible to load certificates and store them permanently. This mode
 is primarily useful when no certificate verification is desired.
 
 The second way to load NSS is to specify the path to a database directory at
-load time. The directory has to expst. If no NSS database exists in the 
+load time. The directory has to exist. If no NSS database exists in the 
 specified directory, it is automatically generated
 
   use NSS (':dpath', $dbdir);

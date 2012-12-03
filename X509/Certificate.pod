@@ -52,7 +52,7 @@ string. Behaves exactly as new ( ).
 
 =item new_from_nick ( STRING )
 
-Cerates a new NSS::Certificate object from the certificate database
+Creates a new NSS::Certificate object from the certificate database
 given a certificate nickname. Returns undef if no fitting certificate
 could be found.
 
@@ -89,7 +89,7 @@ Returns the certificate email address (if present).
 =item subj_alt_name 
 
 Returns the certificate subject alternative name (if present).
-May croak if the extension field in the certificate is invalud.
+May croak if the extension field in the certificate is invalid.
 
 =item version
 
@@ -156,7 +156,7 @@ These functions allow verification of certificate chains. Please note that
 for most of them a database has to be used and a root-certificate list has
 to be loaded. See L<Crypt::NSS::X509>.
 
-There are several diffferent verification functions, because the NSS
+There are several different verification functions, because the NSS
 library offers a variety of methods to validate certificates. You probably
 want to either use C<verify_certificate> or C<verify_pkix>.
 
@@ -172,15 +172,15 @@ Returns false otherwise.
 Returns 1 if the certificate can be validated up to a root-certificate.
 Otherwise returns the numeric NSS error code. Time can contain the unix
 timestamp of the verification time. Usage can contain a the certificate
-usage - usualle certUsageSSLServer is assumed.
+usage - usually certUsageSSLServer is assumed.
 
 =item verify_cert ( [TIME], [USAGE] )
 
 Same as C<verify_certificate>, just using the verify_cert NSS function
 instead of the verify_certificate NSS function.
 
-This is (basically) the verification function that is used by firefox
-at the moment (they add a few more special checks in the firefox codebase).
+This is (basically) the verification function that is used by Firefox
+at the moment (they add a few more special checks in the Firefox codebase).
 
 =item verify_certificate_pkix( [TIME], [USAGE] )
 
