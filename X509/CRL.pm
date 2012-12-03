@@ -5,16 +5,18 @@ use warnings;
 
 use Crypt::NSS::X509;
 
+our $VERSION = '0.02';
+
 sub new_from_pem {
 	my $class = shift;
 	my $pem = shift;
 
-	$pem =~ s/-+BEGIN.*CRL-+// or die("Could not find crl start");
-	$pem =~ s/-+END.*CRL-+// or die("Could not find crl end");
+	$pem =~ s/-+BEGIN.*CRL-+// or croak("Could not find crl start");
+	$pem =~ s/-+END.*CRL-+// or croak("Could not find crl end");
 
 	my $der = MIME::Base64::decode($pem);
 	if ( length($der) < 1 ) {
-		die("Could not decode crl");
+		croak("Could not decode crl");
 	}
 
 	return $class->new_from_der($der, @_);

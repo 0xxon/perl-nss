@@ -2,8 +2,11 @@ package Crypt::NSS::X509::CertList;
 
 use strict;
 use warnings;
+use autodie;
 
 use Crypt::NSS::X509;
+
+our $VERSION = '0.02';
 
 sub new_from_rootlist {
 	my ($class, $filename) = @_;
@@ -26,7 +29,6 @@ sub new_from_rootlist {
 			}
 		}
 	}
-
 	close($fh);
 
 	return $certlist;

@@ -16,7 +16,7 @@ use Crypt::NSS::X509::Certificate;
 use Crypt::NSS::X509::CertList;
 use Crypt::NSS::X509::CRL;
 
-$VERSION = '0.01';
+our $VERSION = '0.02';
 
 @EXPORT_OK = qw(
 );
@@ -78,7 +78,7 @@ sub import {
                 push (@$dest, $_);
         }
         
-        die ("We do not export symbols") unless (scalar @syms == 0);	
+        croak ("We do not export symbols") unless (scalar @syms == 0);	
 
 	return if ( $noinit );
 
@@ -87,7 +87,7 @@ sub import {
 	} elsif (scalar @dbpath == 1) {
 		_init_db($dbpath[0]);
 	} else {
-		die("More than one database path specified");
+		croak ("More than one database path specified");
 	}
 }
 
@@ -95,3 +95,4 @@ END {
   __PACKAGE__->__cleanup;
 }
 
+1;
