@@ -82,9 +82,14 @@ Returns the not before time as a string.
 
 Returns the notAfter tine as a string.
 
+=begin comment
+commented because not supported good by all nss versions.
+
 =item email
 
 Returns the certificate email address (if present).
+
+=end comment
 
 =item subj_alt_name 
 

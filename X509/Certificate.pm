@@ -7,7 +7,7 @@ use Crypt::NSS::X509;
 
 use MIME::Base64 ();
 
-our $VERSION = '0.02_01';
+our $VERSION = '0.02';
 
 sub new_from_pem {
 	my $class = shift;

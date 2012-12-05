@@ -24,6 +24,7 @@
 #include "secitem.h"
 #include "secder.h"
 #include "cert.h"
+#include "certdb.h"
 #include "ocsp.h"
 #include "keyhi.h"
 #include "secerr.h"
@@ -1126,7 +1127,7 @@ DESTROY(crl)
   PPCODE:
 
   if ( crl ) {
-    CERT_DestroyCrl(crl); 
+    SEC_DestroyCrl(crl); 
     crl = 0;
   }
 
@@ -1427,7 +1428,7 @@ subject(cert)
   serial = 3
   notBefore = 5
   notAfter = 6
-  email = 7
+#  email = 7
   version = 8
   subj_alt_name = 9
   common_name = 10
@@ -1450,12 +1451,12 @@ subject(cert)
     RETVAL = item_to_hhex(&cert->serialNumber);
   } else if ( ix == 16 ) {
     RETVAL = item_to_sv(&cert->derCert);
-  } else if ( ix == 7 ) {
-    char * ce = CERT_GetCertificateEmailAddress(cert);
-    if ( ce == NULL ) 
-      XSRETURN_UNDEF;
-    RETVAL = newSVpvf("%s", ce);
-    PORT_Free(ce);
+  //} else if ( ix == 7 ) { Function is not provided in all nss versions :(
+    // char * ce = CERT_GetCertificateEmailAddress(cert);
+    //if ( ce == NULL ) 
+    //  XSRETURN_UNDEF;
+    //RETVAL = newSVpvf("%s", ce);
+    // PORT_Free(ce);
   } else if ( ix == 14 ) {
     RETVAL = newSVpvf("%s", cert->nickname);
   } else if ( ix == 15 ) {
