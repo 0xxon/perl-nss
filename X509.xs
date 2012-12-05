@@ -45,7 +45,7 @@ typedef CERTCertList* Crypt__NSS__X509__CertList;
 typedef CERTSignedCrl* Crypt__NSS__X509__CRL;
 
 char* initstring;
-
+int initialized = 0;
 
 //---- Beginning here this is a direct copy from NSS vfychain.c
 
@@ -821,6 +821,8 @@ _init_nodb()
     croak("NSS init");
   }
 
+  initialized = 1;
+
   
 void
 _init_db(string)
@@ -847,6 +849,8 @@ _init_db(string)
                  err, PORT_ErrorToString(err));
   }
 
+  initialized = 1;
+
 
 void 
 __cleanup(void)
@@ -855,6 +859,12 @@ __cleanup(void)
   SECStatus rv;
   
   CODE:
+
+  if ( !initialized ) {
+    // no init, no shutdown
+    return;
+  }
+
   rv = NSS_Shutdown();
 
   if (rv != SECSuccess) {
@@ -1409,11 +1419,10 @@ fingerprint_md5(cert)
 
 
 SV*
-accessor(cert)
+subject(cert)
   Crypt::NSS::X509::Certificate cert  
 
   ALIAS:
-  subject = 1
   issuer = 2  
   serial = 3
   notBefore = 5
@@ -1434,10 +1443,6 @@ accessor(cert)
   CODE:
 
   if ( ix == 0 ) {
-    croak("Do not access accessor");
-  }
-
-  if ( ix == 1 ) {
     RETVAL = newSVpvf("%s", cert->subjectName);
   } else if ( ix == 2 ) {
     RETVAL = newSVpvf("%s", cert->issuerName);

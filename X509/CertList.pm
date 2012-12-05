@@ -6,7 +6,7 @@ use autodie;
 
 use Crypt::NSS::X509;
 
-our $VERSION = '0.02';
+our $VERSION = '0.02_01';
 
 sub new_from_rootlist {
 	my ($class, $filename) = @_;

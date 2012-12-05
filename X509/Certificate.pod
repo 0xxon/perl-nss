@@ -113,7 +113,7 @@ Returns the name of the signature algorithm.
 
 Returns the name of the encryption algorithm.
 
-=item key_length
+=item bit_length
 
 Bit length of the certificate key
 
@@ -121,6 +121,23 @@ Bit length of the certificate key
 
 Hex representation of the public key of the certificate (also available 
 under the name C<modulus>, for historical reasons
+
+=item modulus
+
+Alias for public_key.
+
+=item nickname
+
+Return the NSS certificate nickname.
+
+=item dbnickname
+
+Return the NSS certificate database nickname.
+
+=item raw_spki
+
+Return the encoded subject public key info part of the certificate.
+Can be used for uniquely identifying a public key (after hashing).
 
 =item exponent
 

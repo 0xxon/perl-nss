@@ -36,6 +36,11 @@ will change.
 Creates a new NSS::CRL object from the provided der-encoded
 certificate string. 
 
+=item new_from_pem ( PEMSTRING ) 
+
+Creates a new NSS::CRL object from the provided pem-encoded
+certificate. 
+
 =back 
 
 =head2 ACCESSORS & VERIFICATION FUNCTIONS
@@ -60,6 +65,12 @@ it will not be found.
 
 Check the signature of the CRL against the NSS::Certificate cert.
 Returns true on success, false otherwise.
+
+=item verify_db( [time] )
+
+Check the signature of the CRL at the provided time (now if no time 
+provided). Tries to find a matching issuer certificate in the NSS
+db.
 
 =item entries
 

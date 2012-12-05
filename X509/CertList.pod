@@ -48,6 +48,11 @@ Add a C<Crypt::NSS::X509::Certificate> to the certificate list
 
 Returns all C<Crypt::NSS::X509::Certificate>s that are in the certificate list as an array.
 
+=item B<new_from_rootlist>
+
+Return a CertList that is constructed by reading a file containing a list of pem-encoded
+certificates.
+
 =back
 
 =head1 AUTHOR

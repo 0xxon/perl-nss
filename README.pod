@@ -105,6 +105,57 @@ this encompasses / why it might be necessary.
 
 =back
 
+=head2 Certificate usages
+
+You can specify several different certificate usages for the verify functions in
+L<Crypt::NSS::X509::Certificate>.
+
+=over 4
+
+=item certUsageAnyCA
+
+CA certificate of any kind.
+
+=item certUsageEmailRecipient
+
+Used to encrypt S/MIME mails.
+
+=item certUsageEmailSigner
+
+Used to verify S/MIME email signatures.
+
+=item certUsageObjectSigner
+
+Certificate allowed to sign executable code files like jar files.
+
+=item certUsageSSLCA
+
+SSL Certificate Authority certificate.
+
+=item certUsageSSLClient
+
+SSL Client certificate.
+
+=item certUsageSSLServer
+
+SSL Server certificate.
+
+=item certUsageSSLServerWithStepUp
+
+SSL Server certificate, which allows export clients to use strong cryptography.
+
+=item certUsageStatusResponder
+
+Used for OCSP responders.
+
+=item certUsageProtectedObjectSigner
+=item certUsageUserCertImport
+=item certUsageVerifyCA
+
+TODO: Find out what those do.
+
+=back
+
 =head1 SEE ALSO
 
 OpenSSL(1), Crypt::X509, Crypt::NSS
