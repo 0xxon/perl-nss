@@ -773,7 +773,7 @@ BOOT:
 {
   HV *stash = gv_stashpvn("Crypt::NSS::X509", 16, TRUE);
 
-  struct { char *n; I32 s; } NSS__const[] = {
+  struct { char *n; I32 s; } Crypt__NSS__X509__const[] = {
 
   {"certUsageSSLClient", certUsageSSLClient},
   {"certUsageSSLServer", certUsageSSLServer},
@@ -793,8 +793,8 @@ BOOT:
   char *name;
   int i;
 
-  for (i = 0; (name = NSS__const[i].n); i++) {
-    newCONSTSUB(stash, name, newSViv(NSS__const[i].s));
+  for (i = 0; (name = Crypt__NSS__X509__const[i].n); i++) {
+    newCONSTSUB(stash, name, newSViv(Crypt__NSS__X509__const[i].s));
   }
 
   
