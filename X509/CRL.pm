@@ -5,7 +5,7 @@ use warnings;
 
 use Crypt::NSS::X509;
 
-our $VERSION = '0.03_01';
+our $VERSION = '0.03_02';
 
 sub new_from_pem {
 	my $class = shift;
