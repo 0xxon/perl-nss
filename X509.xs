@@ -1463,6 +1463,8 @@ subject(cert)
     RETVAL = newSVpvf("%s", cert->dbnickname);
   } else if ( ix == 10 ) {
     char * cn = CERT_GetCommonName(&cert->subject);
+    if ( !cn ) 
+      XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", cn);
     PORT_Free(cn);
   } else if ( ix == 11 ) {
@@ -1548,7 +1550,8 @@ subject(cert)
       sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
       break;
   default:
-      sv_catpv(out, "UnknownElement,");
+      // simply ignore for now - more or less like firefox
+      //sv_catpv(out, "UnknownElement,");
       break;
   }
   current = CERT_GetNextGeneralName(current);
