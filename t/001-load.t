@@ -2,7 +2,7 @@ use 5.10.1;
 use strict;
 use warnings;
 
-use Test::More tests=>52;
+use Test::More tests=>56;
 
 BEGIN { use_ok( 'Crypt::NSS::X509' ); }
 
@@ -21,6 +21,7 @@ diag('Selfsigned certificate');
 	is($cert->notAfter, 'Tue Oct 15 22:23:31 2013', 'notAfter');
 	ok(!$cert->subj_alt_name, 'no alt name');
 	is($cert->common_name, "Test Certificate", 'Test Certificate');
+	is($cert->country_name, "US", 'US');
 	is($cert->sig_alg_name, "SHA1WithRSA", 'SHA1WithRSA');
 	is($cert->key_alg_name, "RSAEncr", 'RSAEncr');
 	ok($cert->bit_length == 1024, 'bit_length == 1024');
@@ -46,6 +47,7 @@ diag('Google certificate');
 	is($cert->notAfter, 'Mon Sep 30 23:59:59 2013', 'notAfter');
 	ok(!$cert->subj_alt_name, 'no alt name');
 	is($cert->common_name, "www.google.com", 'Test Certificate');
+	is($cert->country_name, "US", 'US');
 	is($cert->sig_alg_name, "SHA1WithRSA", 'SHA1WithRSA');
 	is($cert->key_alg_name, "RSAEncr", 'RSAEncr');
 	ok($cert->bit_length == 1024, 'bit_length == 1024');
@@ -66,6 +68,7 @@ diag('Thawte EC-root certificate');
 	is($cert->sig_alg_name, "AnsiX962ECDsaSignatureWithSha384", 'AnsiX962ECDsaSignatureWithSha384');
 	is($cert->key_alg_name, "ECPublicKey", 'ECPublicKey');
 	ok($cert->bit_length == 384, 'bit_length == 384');
+	is($cert->country_name, "US", 'US');
 	is($cert->modulus, '04a2d59c827b959df1527887fe8a16bf05e6dfa3024f0d07c60051ba0c02522d22a44239c4fe8feac9c1bed44dff9f7a9ee2b17c9aada786097387d1e79ae37aa5aa6efbbab370c06788a235d4a39ab1fdadc2ef31faa8b9f3fb08c691d1fb2995', 'modulus');
 	is($cert->curve, 'ECsecp384r1', 'ECsecp384r1');
 	is($cert->fingerprint_md5, '749dea6024c4fd22533ecc3a72d9294f', 'md5');
@@ -80,6 +83,7 @@ diag('NIST DSA test-certificate');
 	my $cert = Crypt::NSS::X509::Certificate->new_from_pem($pem);
 	
 	isa_ok($cert, 'Crypt::NSS::X509::Certificate');
+	is($cert->country_name, "US", 'US');
 	is($cert->sig_alg_name, "AnsiX9DsaSignatureWithSha1", 'AnsiX9DsaSignatureWithSha1');
 	is($cert->key_alg_name, "AnsiX9DsaSignature", 'AnsiX9DsaSignature');
 	ok($cert->bit_length == 1024, 'bit_length == 1024');

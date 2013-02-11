@@ -105,6 +105,10 @@ Returns the certificate version number.
 Returns the most specific common name specified in the certificate
 subject.
 
+=item country_name
+
+Returns the country name specified in the certificate subject.
+
 =item is_root
 
 Returns true if NSS thinks that the certificate is a root (selfsigned)

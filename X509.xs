@@ -1406,6 +1406,8 @@ fingerprint_md5(cert)
   } else if ( ix == 2 ) {
     rv = PK11_HashBuf(SEC_OID_SHA256, fingerprint, cert->derCert.data, cert->derCert.len);
     item.len = SHA256_LENGTH;
+  } else {
+    croak("Internal error - unknown function");
   }
   
   if ( rv != SECSuccess ) {
@@ -1438,6 +1440,7 @@ subject(cert)
   nickname = 14
   dbnickname = 15
   der = 16
+  country_name = 17
 
   PREINIT:
 
@@ -1463,6 +1466,12 @@ subject(cert)
     RETVAL = newSVpvf("%s", cert->dbnickname);
   } else if ( ix == 10 ) {
     char * cn = CERT_GetCommonName(&cert->subject);
+    if ( !cn ) 
+      XSRETURN_UNDEF;
+    RETVAL = newSVpvf("%s", cn);
+    PORT_Free(cn);
+  } else if ( ix == 17 ) {
+    char * cn = CERT_GetCountryName(&cert->subject);
     if ( !cn ) 
       XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", cn);
