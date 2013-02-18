@@ -1441,6 +1441,11 @@ subject(cert)
   dbnickname = 15
   der = 16
   country_name = 17
+  org_name = 18
+  org_unit_name = 19
+  locality_name = 20
+  state_name = 21
+
 
   PREINIT:
 
@@ -1464,14 +1469,31 @@ subject(cert)
     RETVAL = newSVpvf("%s", cert->nickname);
   } else if ( ix == 15 ) {
     RETVAL = newSVpvf("%s", cert->dbnickname);
-  } else if ( ix == 10 ) {
-    char * cn = CERT_GetCommonName(&cert->subject);
-    if ( !cn ) 
-      XSRETURN_UNDEF;
-    RETVAL = newSVpvf("%s", cn);
-    PORT_Free(cn);
-  } else if ( ix == 17 ) {
-    char * cn = CERT_GetCountryName(&cert->subject);
+  } else if ( ix == 10 || ( ix >= 17 && ix <= 21 ) ) {
+    char * cn = NULL;
+    switch ( ix ) {
+    	case 10:
+		cn = CERT_GetCommonName(&cert->subject);
+		break;
+	case 17:
+    		cn = CERT_GetCountryName(&cert->subject);
+		break;
+	case 18:
+    		cn = CERT_GetOrgName(&cert->subject);
+		break;
+	case 19:
+    		cn = CERT_GetOrgUnitName(&cert->subject);
+		break;
+	case 20:
+		cn = CERT_GetLocalityName(&cert->subject);
+		break;
+	case 21:
+		cn = CERT_GetStateName(&cert->subject);
+		break;
+	default:
+		croak("Internal error");
+	}
+	
     if ( !cn ) 
       XSRETURN_UNDEF;
     RETVAL = newSVpvf("%s", cn);
