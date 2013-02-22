@@ -7,6 +7,7 @@ use 5.10.1;
 
 use vars qw($VERSION @EXPORT_OK);
 use Exporter;
+use Encode qw/encode/;
 use base qw(Exporter);
 
 use autodie qw(open close);
@@ -22,6 +23,7 @@ our $VERSION = '0.03_03';
 
 @EXPORT_OK = qw(
 );
+
 
 
 BOOT_XS: {

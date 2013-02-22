@@ -539,6 +539,43 @@ SV* oid_to_sv(SECItem *oid)
   return newSVpvf("%s", out);
 }
 
+static void sv_encode(SV* in) {
+  if (!sv_utf8_decode(in)) {
+    // ok, yep, let's just handle it over to encode.
+    dSP;
+    int count = 0;
+
+    SV *utf8 = newSVpvn("UTF-8", 5);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    XPUSHs(utf8);
+    XPUSHs(in);
+    PUTBACK;
+
+    count = call_pv("Encode::encode", G_SCALAR);
+
+    SPAGAIN;
+
+    if ( count != 1 ) 
+      croak("Encode returned something... strange... count = %d", count);
+
+    SV* out = POPs;
+
+    //sv_replace(in, out);
+    sv_copypv(in, out);
+    //SvREFCNT_dec(out);
+    SvREFCNT_dec(utf8);
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+  }
+}
+
 static PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
   switch(usage) {
     case certUsageSSLClient:
@@ -1496,8 +1533,10 @@ subject(cert)
 	
     if ( !cn ) 
       XSRETURN_UNDEF;
-    RETVAL = newSVpvf("%s", cn);
+    SV* out = newSVpvf("%s", cn);
     PORT_Free(cn);
+    sv_encode(out);
+    RETVAL = out;
   } else if ( ix == 11 ) {
     if ( cert->isRoot == PR_TRUE ) {
       XSRETURN_YES;
