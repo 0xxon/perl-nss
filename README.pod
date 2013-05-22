@@ -7,7 +7,7 @@ Crypt::NSS::X509 - Perl interface for the certificate handling parts of the NSS 
   use 5.10.1;
   use Perl6::Slurp;
 
-  use Crypt::X509::NSS;
+  use Crypt::NSS::X509;
 
   my $cert = Crypt::X509::NSS::Certificate->new(slurp('derfile'));
 
