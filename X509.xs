@@ -113,6 +113,31 @@ configureRevocationParams(CERTRevocationFlags *flags)
 
 //---- end direct copy from vfychain.c
 
+// adapted from alg1485.c
+
+/* RDNs are sorted from most general to most specific.
+ * This code returns the FIRST one found, the most general one found.
+ */
+static SECItem *
+CERT_GetNameElement(PRArenaPool *arena, CERTName *name, int wantedTag)
+{
+    CERTRDN** rdns = name->rdns;
+    CERTRDN*  rdn;
+    CERTAVA*  ava  = NULL;
+
+    while (rdns && (rdn = *rdns++) != 0) {
+	CERTAVA** avas = rdn->avas;
+	while (avas && (ava = *avas++) != 0) {
+	    int tag = CERT_GetAVATag(ava);
+	    if ( tag == wantedTag ) {
+		avas = NULL;
+		rdns = NULL; /* break out of all loops */
+	    }
+	}
+    }
+    return ava ? CERT_DecodeAVAValue(&ava->value) : NULL;
+}
+
 
 // adapted from secutil.c - removed unnecessary argument.
 
@@ -676,6 +701,14 @@ static SECStatus sv_to_item(SV* certSv, SECItem* dst) {
 
 static SV* item_to_sv(SECItem* item) {
   return newSVpvn((const char*) item->data, item->len);
+}
+
+static SV* safe_item_to_sv(SECItem* item) {
+ if ( item == NULL || item->data == NULL || item->len == 0 ) {
+   return &PL_sv_undef;
+ } else {
+   return item_to_sv(item);
+ }
 }
 
 static
@@ -1482,6 +1515,14 @@ subject(cert)
   org_unit_name = 19
   locality_name = 20
   state_name = 21
+  business_category = 40
+  ev_incorporation_locality = 41
+  ev_incorporation_state = 42
+  ev_incorporation_country = 43
+  subject_serial = 44
+  street_address = 45
+  locality = 46
+  postal_code = 47
 
 
   PREINIT:
@@ -1543,6 +1584,22 @@ subject(cert)
     } else {
       XSRETURN_NO;
     }
+  } else if ( ix == 40 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_BUSINESS_CATEGORY));
+  } else if ( ix == 41 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_LOCALITY));
+  } else if ( ix == 42 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_STATE));
+  } else if ( ix == 43 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_COUNTRY));
+  } else if ( ix == 44 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_AVA_SERIAL_NUMBER));
+  } else if ( ix == 45 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_AVA_POSTAL_ADDRESS));
+  } else if ( ix == 46 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_AVA_LOCALITY));
+  } else if ( ix == 47 ) {
+    RETVAL = safe_item_to_sv(CERT_GetNameElement(NULL, &cert->subject, SEC_OID_AVA_POSTAL_CODE));
   } else if ( ix == 12 ) {
     RETVAL = oid_to_sv(&cert->signature.algorithm);
   } else if ( ix == 13 ) {
