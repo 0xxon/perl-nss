@@ -1045,6 +1045,7 @@ dump_certificate_cache_info()
   nss_DumpCertificateCacheInfo();
 
 
+
 MODULE = Crypt::NSS::X509    PACKAGE = Crypt::NSS::X509::CRL
 
 Crypt::NSS::X509::CRL
@@ -1490,6 +1491,169 @@ fingerprint_md5(cert)
   OUTPUT:
   RETVAL
 
+AV*
+extension_oids(cert)
+  Crypt::NSS::X509::Certificate cert
+
+  PREINIT:
+
+  CODE:
+  RETVAL = newAV();
+
+  if (!cert->extensions) {
+    return;
+  }
+
+  for ( int i = 0; cert->extensions[i] != NULL; i++ ) {
+    const SECItem *oid = &cert->extensions[i]->id;
+    char* oidstr = CERT_GetOidString(oid);
+    SV* oidsv = newSVpv(oidstr, 0);
+    av_push(RETVAL, oidsv);
+  }
+
+
+  OUTPUT:
+  RETVAL
+
+
+HV*
+policy(cert)
+  Crypt::NSS::X509::Certificate cert
+  
+  PREINIT:
+    SECStatus rv;
+    SECItem           cps;
+    CERTCertificatePolicies *policies;
+    CERTPolicyInfo **policyInfos, *policyInfo;
+    CERTPolicyQualifier **policyQualifiers, *policyQualifier;
+
+  CODE:
+    rv = CERT_FindCertExtension(cert, SEC_OID_X509_CERTIFICATE_POLICIES, &cps);
+    if (rv != SECSuccess) {
+      XSRETURN_NO;
+    } 
+
+    policies = CERT_DecodeCertificatePoliciesExtension(&cps);
+    if ( !policies ) 
+      XSRETURN_NO;
+
+    RETVAL = newHV();
+    sv_2mortal((SV*)RETVAL);
+
+    policyInfos = policies->policyInfos; 
+    while ( *policyInfos != NULL ) {
+      policyInfo = *policyInfos++;
+      switch (policyInfo->oid) {
+      case SEC_OID_VERISIGN_USER_NOTICES:
+        assert(false); // implement me.
+	break;
+      default: {
+
+        char* policyoid = CERT_GetOidString(&policyInfo->policyID);
+	SV* policySV = newSVpv(policyoid, 0);
+	if ( !hv_store(RETVAL, "policy_oid", 10, policySV, 0) ) croak("Error storing data in hash");
+	break;
+	}
+      }
+
+      if ( policyInfo->policyQualifiers) {
+        AV* qualifiers = newAV();
+	if ( !hv_store(RETVAL, "qualifiers", 10, newRV_noinc((SV*)qualifiers), 0) ) croak("Error storing data in hash");
+        policyQualifiers = policyInfo->policyQualifiers;
+	while ( *policyQualifiers != NULL ) {
+	  policyQualifier = *policyQualifiers++;
+	  HV* qualifier = newHV();
+	  av_push(qualifiers, newRV_noinc((SV*)qualifier));
+	  char* policyoid = CERT_GetOidString(&policyQualifier->qualifierID);
+          SV* policySV = newSVpv(policyoid, 0);
+	  if ( !hv_store(qualifier, "oid", 3, policySV, 0)) croak("Error storing data in hash");
+	  switch (policyQualifier->oid) {
+	    case SEC_OID_PKIX_CPS_POINTER_QUALIFIER: {
+	    if ( !hv_store(qualifier, "type", 4, newSVpv("Certification Practice Statement", 0), 0) ) croak("Error storing data in hash");
+	    if ( !hv_store(qualifier, "value", 5, item_to_sv(&policyQualifier->qualifierValue), 0) ) croak("Error storing data in hash");
+
+	    break;
+	    }
+	    default:{
+	    }
+	  }
+	}  
+      }
+    }
+
+  OUTPUT:
+  RETVAL
+
+SV*
+subj_alt_name(cert)
+  Crypt::NSS::X509::Certificate cert 
+
+  PREINIT:
+    SECStatus rv;
+    SECItem           subAltName;
+    CERTGeneralName * nameList;
+    CERTGeneralName * current;
+    PRArenaPool *     arena          = NULL;
+
+  CODE:
+    SV* out = newSVpvn("", 0);
+    
+    rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, &subAltName);
+
+    if (rv != SECSuccess) {
+      XSRETURN_NO;
+    } 
+    
+    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    if ( !arena ) 
+      croak("Could not create arena");
+   
+    nameList = current = CERT_DecodeAltNameExtension(arena, &subAltName);
+    if(!current)
+      croak("No namelist");
+
+    bool first = true;
+    do {
+  switch (current->type) {
+  case certDNSName:
+            {
+            if ( !first ) 
+		sv_catpv(out, ",");
+	    else 
+		first = false;
+            sv_catpv(out, "DNS:");
+      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+      break;
+            }
+  case certIPAddress:
+	    if ( !first ) 
+            	sv_catpv(out, ",");
+	    else
+		first = false;
+      sv_catpv(out, "IP:");
+      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
+      break;
+  default:
+      // simply ignore for now - more or less like firefox
+      //sv_catpv(out, "UnknownElement,");
+      break;
+  }
+  current = CERT_GetNextGeneralName(current);
+    } while (current != nameList);
+    
+    RETVAL = out;
+
+    if (arena) {
+      PORT_FreeArena(arena, PR_FALSE);
+    }
+
+    if (subAltName.data) {
+      SECITEM_FreeItem(&subAltName, PR_FALSE);
+    }
+
+  OUTPUT:
+  RETVAL
+
 
 SV*
 subject(cert)
@@ -1502,7 +1666,6 @@ subject(cert)
   notAfter = 6
 #  email = 7
   version = 8
-  subj_alt_name = 9
   common_name = 10
   is_root = 11
   sig_alg_name = 12
@@ -1632,69 +1795,6 @@ subject(cert)
     // if version is not specified it it 1 (0).
     int version = cert->version.len ? DER_GetInteger(&cert->version) : 0;
     RETVAL = newSViv(version+1);
-  } else if ( ix == 9 ) {
-    SECStatus rv;
-    SECItem           subAltName;
-    CERTGeneralName * nameList;
-    CERTGeneralName * current;
-    PRArenaPool *     arena          = NULL;
-    SV* out = newSVpvn("", 0);
-    
-    rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, 
-        &subAltName);
-
-    if (rv != SECSuccess) {
-      XSRETURN_NO;
-    } 
-    
-    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if ( !arena ) 
-      croak("Could not create arena");
-   
-    nameList = current = CERT_DecodeAltNameExtension(arena, &subAltName);
-    if(!current)
-      croak("No namelist");
-
-    bool first = true;
-    do {
-  switch (current->type) {
-  case certDNSName:
-            {
-            if ( !first ) 
-		sv_catpv(out, ",");
-	    else 
-		first = false;
-            sv_catpv(out, "DNS:");
-      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
-      break;
-            }
-  case certIPAddress:
-	    if ( !first ) 
-            	sv_catpv(out, ",");
-	    else
-		first = false;
-      sv_catpv(out, "IP:");
-      sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
-      break;
-  default:
-      // simply ignore for now - more or less like firefox
-      //sv_catpv(out, "UnknownElement,");
-      break;
-  }
-  current = CERT_GetNextGeneralName(current);
-    } while (current != nameList);
-    
-    RETVAL = out;
-
-    if (arena) {
-      PORT_FreeArena(arena, PR_FALSE);
-    }
-
-    if (subAltName.data) {
-      SECITEM_FreeItem(&subAltName, PR_FALSE);
-    }
-
-
   } else {
     croak("Unknown accessor %d", ix);
   }
