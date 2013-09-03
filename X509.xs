@@ -138,6 +138,8 @@ CERT_GetNameElement(PRArenaPool *arena, CERTName *name, int wantedTag)
     return ava ? CERT_DecodeAVAValue(&ava->value) : NULL;
 }
 
+// if several elements of one name are defined, all of them are summed
+// up.
 int
 CERT_GetNameElementSize(PRArenaPool *arena, CERTName *name, int wantedTag)
 {
@@ -145,17 +147,18 @@ CERT_GetNameElementSize(PRArenaPool *arena, CERTName *name, int wantedTag)
     CERTRDN*  rdn;
     CERTAVA*  ava  = NULL;
 
+    int size = 0;
+
     while (rdns && (rdn = *rdns++) != 0) {
 	CERTAVA** avas = rdn->avas;
 	while (avas && (ava = *avas++) != 0) {
 	    int tag = CERT_GetAVATag(ava);
 	    if ( tag == wantedTag ) {
-		avas = NULL;
-		rdns = NULL; /* break out of all loops */
+	      size += ava->value.len;
 	    }
 	}
     }
-    return ava ? (int) ava->value.len : -1;
+    return size;
 }
 
 // adapted from secutil.c - removed unnecessary argument.
