@@ -138,6 +138,25 @@ CERT_GetNameElement(PRArenaPool *arena, CERTName *name, int wantedTag)
     return ava ? CERT_DecodeAVAValue(&ava->value) : NULL;
 }
 
+int
+CERT_GetNameElementSize(PRArenaPool *arena, CERTName *name, int wantedTag)
+{
+    CERTRDN** rdns = name->rdns;
+    CERTRDN*  rdn;
+    CERTAVA*  ava  = NULL;
+
+    while (rdns && (rdn = *rdns++) != 0) {
+	CERTAVA** avas = rdn->avas;
+	while (avas && (ava = *avas++) != 0) {
+	    int tag = CERT_GetAVATag(ava);
+	    if ( tag == wantedTag ) {
+		avas = NULL;
+		rdns = NULL; /* break out of all loops */
+	    }
+	}
+    }
+    return ava ? (int) ava->value.len : -1;
+}
 
 // adapted from secutil.c - removed unnecessary argument.
 
@@ -180,7 +199,6 @@ FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
     }
     return(issuerCert);
 }
-
 
 
 // function more or less ripped from nsNSSCertHelper.cpp, because NSS does apparently
@@ -1491,14 +1509,14 @@ fingerprint_md5(cert)
   OUTPUT:
   RETVAL
 
-AV*
+HV*
 extension_oids(cert)
   Crypt::NSS::X509::Certificate cert
 
   PREINIT:
 
   CODE:
-  RETVAL = newAV();
+  RETVAL = newHV();
 
   if (!cert->extensions) {
     return;
@@ -1508,10 +1526,10 @@ extension_oids(cert)
     const SECItem *oid = &cert->extensions[i]->id;
     char* oidstr = CERT_GetOidString(oid);
     SV* oidsv = newSVpv(oidstr, 0);
-    av_push(RETVAL, oidsv);
+    SV* sizeSV = newSVuv(cert->extensions[i]->id.len + cert->extensions[i]->value.len);
+    if ( !hv_store_ent(RETVAL, oidsv, sizeSV, 0) ) croak("Error storing data in hash");
   }
-
-
+	
   OUTPUT:
   RETVAL
 
@@ -1650,6 +1668,65 @@ subj_alt_name(cert)
     if (subAltName.data) {
       SECITEM_FreeItem(&subAltName, PR_FALSE);
     }
+
+  OUTPUT:
+  RETVAL
+
+SV*
+common_name_size(cert)
+  Crypt::NSS::X509::Certificate cert  
+
+  ALIAS:
+  country_name_size = 17
+  org_name_size = 18
+  org_unit_name_size = 19
+  locality_name_size = 20
+  state_name_size = 21
+  business_category_size = 40
+  ev_incorporation_locality_size = 41
+  ev_incorporation_state_size = 42
+  ev_incorporation_country_size = 43
+  subject_serial_size = 44
+  street_address_size = 45
+  locality_size = 46
+  postal_code_size = 47
+
+  PREINIT:
+
+  CODE:
+
+  int size = -1;
+  
+  if ( ix == 0 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_COMMON_NAME);
+  else if ( ix == 17 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_COUNTRY_NAME);
+  else if ( ix == 18 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_ORGANIZATION_NAME);
+  else if ( ix == 19 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_ORGANIZATIONAL_UNIT_NAME);
+  else if ( ix == 20 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_LOCALITY);
+  else if ( ix == 21 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_STATE_OR_PROVINCE);
+  else if ( ix == 40 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_BUSINESS_CATEGORY);
+  else if ( ix == 41 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_LOCALITY);
+  else if ( ix == 42 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_STATE);
+  else if ( ix == 43 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_EV_INCORPORATION_COUNTRY);
+  else if ( ix == 44 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_SERIAL_NUMBER);
+  else if ( ix == 45 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_POSTAL_ADDRESS);
+  else if ( ix == 46 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_LOCALITY);
+  else if ( ix == 47 ) 
+  	size = CERT_GetNameElementSize(NULL, &cert->subject, SEC_OID_AVA_POSTAL_CODE);
+    
+  RETVAL = newSViv(size);
 
   OUTPUT:
   RETVAL
