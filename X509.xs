@@ -966,6 +966,24 @@ __cleanup(void)
   }
   //printf("Destroy was happy\n");
   
+void
+__add_builtins(string)
+  SV* string;
+
+  PREINIT:
+  char* path;
+  SECStatus rv;
+
+  CODE:
+
+  path = SvPV_nolen(string);
+
+  rv = SECMOD_AddNewModule("Builtins", path, 0, 0);  // nssckbi
+  if (rv != SECSuccess) {
+    PRErrorCode err = PR_GetError();
+    croak( "could not add certificate to db %d = %s\n",
+           err, PORT_ErrorToString(err));
+  } 
 
 SV*
 add_cert_to_db(cert, string)
