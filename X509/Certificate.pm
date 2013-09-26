@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Crypt::NSS::X509;
+use Carp;
 
 use MIME::Base64 ();
 

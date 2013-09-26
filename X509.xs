@@ -1540,7 +1540,7 @@ extension_oids(cert)
   RETVAL = newHV();
 
   if (!cert->extensions) {
-    return;
+	XSRETURN_UNDEF;
   }
 
   for ( int i = 0; cert->extensions[i] != NULL; i++ ) {
