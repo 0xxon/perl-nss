@@ -938,7 +938,7 @@ _init_db(string)
   if (secStatus != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak("NSS Init failed: %d = %s\n",
-                 err, PORT_ErrorToString(err));
+                 err, "");
   }
 
   initialized = 1;
@@ -962,7 +962,7 @@ __cleanup(void)
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak( "NSS Shutdown failed %d = %s\n",
-           err, PORT_ErrorToString(err));
+           err, "");
   }
   //printf("Destroy was happy\n");
   
@@ -982,7 +982,7 @@ __add_builtins(string)
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak( "could not add certificate to db %d = %s\n",
-           err, PORT_ErrorToString(err));
+           err, "");
   } 
 
 SV*
@@ -1026,7 +1026,7 @@ add_cert_to_db(cert, string)
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak( "could not add certificate to db %d = %s\n",
-           err, PORT_ErrorToString(err));
+           err, "");
   }
 
   if ( ix == 1 ) {
@@ -1058,7 +1058,7 @@ _reinit()
 
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
-    croak( "NSS Shutdown failed during reinit. Last error-code: %d = %s\n", err, PORT_ErrorToString(err));
+    croak( "NSS Shutdown failed during reinit. Last error-code: %d = %s\n", err, "");
   }
 
 
@@ -1072,7 +1072,7 @@ _reinit()
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
     croak("NSS Init failed: %d = %s\n",                  
-    err, PORT_ErrorToString(err));
+    err, "");
   } 
     
   
@@ -1109,7 +1109,7 @@ new_from_der(class, string)
   if ( !signedCrl ) {
     PRErrorCode err = PR_GetError();
     croak( "Could not decode CRL %d = %s\n",
-           err, PORT_ErrorToString(err));
+           err, "");
   }
 
   RETVAL = signedCrl;
@@ -2187,7 +2187,7 @@ new(class, string, nickSv = NO_INIT)
   if (!cert) {
     PRErrorCode err = PR_GetError();
     croak( "couldn't import certificate %d = %s\n",
-           err, PORT_ErrorToString(err));
+           err, "");
   }
   PORT_Free(item.data);
 

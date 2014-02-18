@@ -21,6 +21,7 @@ BEGIN {
 
 # load root certificates to db
 Crypt::NSS::X509->load_rootlist('certs/root.ca');
+#Crypt::NSS::X509::__add_builtins("/Users/johanna/sw/lib/perl5/site_perl/5.18.0/auto/share/dist/Alien-NSS/lib/libnssckbi.dylib");
 
 {
 	my $selfsigned = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
