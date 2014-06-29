@@ -15,7 +15,7 @@ Crypt::NSS::X509::Certificate - NSS Certificate functions
   say $cert->issuer();
 
   my $valid = $cert->verify_cert();
-  
+
   if ( ! $cert->match_name('www.testdomain') ) {
     # Domain does not match certificate information
     exit(1);
@@ -27,7 +27,7 @@ Perl interface for the certificate access parts of the NSS API.
 
 =head1 DESCRIPTION
 
-This class gives access to most of the certificate handling 
+This class gives access to most of the certificate handling
 functions of NSS. For information on how to load and initialize the
 NSS library, please refer to L<Crypt::NSS::X509>.
 
@@ -37,10 +37,10 @@ NSS library, please refer to L<Crypt::NSS::X509>.
 
 =over 4
 
-=item new ( DERSTRING ) 
+=item new ( DERSTRING )
 
 Creates a new NSS::Certificate object from the provided der-encoded
-certificate string. 
+certificate string.
 
 The function croaks with the NSS error in case NSS cannot parse or
 import the certificate
@@ -56,7 +56,7 @@ Creates a new NSS::Certificate object from the certificate database
 given a certificate nickname. Returns undef if no fitting certificate
 could be found.
 
-=back 
+=back
 
 =head2 ACCESSORS
 
@@ -91,7 +91,7 @@ Returns the certificate email address (if present).
 
 =end comment
 
-=item subj_alt_name 
+=item subj_alt_name
 
 Returns the certificate subject alternative name (if present).
 May croak if the extension field in the certificate is invalid.
@@ -106,8 +106,49 @@ Returns the most specific common name specified in the certificate
 subject.
 
 =item country_name
-
 Returns the country name specified in the certificate subject.
+
+=item business_category
+Returns the business category of the certificate if present.
+
+=item ev_incorporation_country
+Returns the extended validation country if present.
+
+=item ev_incorporation_locality
+Returns the extended validation locality if present.
+
+=item ev_incorporation_state
+Returns the extended validation incorporation state if present.
+
+=item extension_oids
+Returns the oids of the present extension
+
+=item locality
+Locality given in certificate subject.
+
+=item locality_name
+Locality name given in certificate subject.
+
+=item org_name
+Organization name given in certificate subject.
+
+=item org_unit_name
+Organizational unit name given in certificate subject.
+
+=item policy
+Returns the certificate policy.
+
+=item postal_code
+Returns the postal code from the subject, if present.
+
+=item state_name
+Returns the name of the state from the subject if present.
+
+=item street_address
+Returns the street address from the subject is present.
+
+=item subject_serial
+Returns the serial from the subject. Note this does not necessarily have to be the same as the serial given outside the subject of the certificate.
 
 =item is_root
 
@@ -128,7 +169,7 @@ Bit length of the certificate key
 
 =item public_key
 
-Hex representation of the public key of the certificate (also available 
+Hex representation of the public key of the certificate (also available
 under the name C<modulus>, for historical reasons
 
 =item modulus
@@ -188,7 +229,7 @@ want to either use C<verify_certificate> or C<verify_pkix>.
 
 =over 4
 
-=item match_name ( HOSTNAME ) 
+=item match_name ( HOSTNAME )
 
 Return true is NSS considers the hostname to be valid for the certificate.
 Returns false otherwise.
@@ -240,16 +281,16 @@ the CERT_PKIXVerifyCert function. Otherwise returns the numeric NSS error code.
 This function is (basically) used by Chrome to validate certificates.
 
 Trusted cert list can contain a L<NSS::CertList>, of trusted certificates.
-Please note that it is not a good idea to just load all root-certificates into 
+Please note that it is not a good idea to just load all root-certificates into
 a NSS::CertList and try to validate using this function, without using a NSS
 database backend; chain validation does not work correctly in that case.
 
 =item verify_pkix_aia ( [TIME], [USAGE], [TRUSTED CERT LIST )
 
-Same as verify_pkix, but tries to retrieve missing intermediate certificates using 
+Same as verify_pkix, but tries to retrieve missing intermediate certificates using
 the Authority Information Access (AIA) field in the certificate (if present).
 
-=item get_cert_chain_from_cert( [TIME], [USAGE] ) 
+=item get_cert_chain_from_cert( [TIME], [USAGE] )
 
 Get a L<Crypt::NSS::X509::CertList> containing the certificate chain up to a root-certificate
 for the current certificate.

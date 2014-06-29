@@ -12,7 +12,7 @@ use Data::Dumper;
 my $vfytime = 1351057173; # time at which certificates were valid
 my $invalidtime = 42; # well, certainly not valid here.
 
-BEGIN { 
+BEGIN {
 	# use a temporary directory for our database...
 	$dbdir = File::Temp->newdir();
 
@@ -25,7 +25,7 @@ Crypt::NSS::X509->load_rootlist('certs/root.ca');
 {
 	my $selfsigned = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/selfsigned.crt'));
 	isa_ok($selfsigned, 'Crypt::NSS::X509::Certificate');
-	# lol. The different verify operatins give different 
+	# lol. The different verify operatins give different
 	is($selfsigned->verify_pkix($vfytime), -8179, 'no verify');
 	is($selfsigned->verify_cert($vfytime), -8172, 'no verify');
 	is($selfsigned->verify_certificate($vfytime), -8172, 'no verify');
@@ -39,13 +39,14 @@ Crypt::NSS::X509->load_rootlist('certs/root.ca');
 	is($rapidssl->verify_cert($vfytime), 1, 'verify');
 	is($rapidssl->verify_certificate($vfytime), 1, 'verify');
 	is($rapidssl->verify_certificate_pkix($vfytime), 1, 'verify');
-	
+
 	# but not with invalid time
-	
+
 	is($rapidssl->verify_pkix($invalidtime), -8181, 'no verify');
 	is($rapidssl->verify_cert($invalidtime), -8181, 'no verify');
 	# Fun. Those apparently try chain resolution before date checking
-	is($rapidssl->verify_certificate($invalidtime), -8162, 'no verify');
+	my $res = $rapidssl->verify_certificate($invalidtime);
+	ok($res == -8162 || $res == -8157, 'no verify'); # return code changed in later versions
 	is($rapidssl->verify_certificate_pkix($invalidtime), -8179, 'no verify');
 }
 
@@ -61,7 +62,7 @@ Crypt::NSS::X509->load_rootlist('certs/root.ca');
 	is($google->verify_certificate_pkix($vfytime), -8179, 'no verify');
 
 	# but when we load the thawte intermediate cert too it verifes...
-	
+
 	{
 		my $thawte = Crypt::NSS::X509::Certificate->new_from_pem(slurp('certs/thawte.crt'));
 		isa_ok($thawte, 'Crypt::NSS::X509::Certificate');
@@ -70,7 +71,7 @@ Crypt::NSS::X509->load_rootlist('certs/root.ca');
 		is($google->verify_certificate($vfytime), 1, 'verify with added thawte');
 		is($google->verify_certificate_pkix($vfytime), 1, 'verify with added thawte');
 
-		my @want = ( 
+		my @want = (
 			'CN=www.google.com,O=Google Inc,L=Mountain View,ST=California,C=US',
 			'CN=Thawte SGC CA,O=Thawte Consulting (Pty) Ltd.,C=ZA',
 			'OU=Class 3 Public Primary Certification Authority,O="VeriSign, Inc.",C=US'
@@ -83,7 +84,7 @@ Crypt::NSS::X509->load_rootlist('certs/root.ca');
 	}
 }
 
-# and apparently due to some magic - the intermediate is now cached, even after all certs 
+# and apparently due to some magic - the intermediate is now cached, even after all certs
 # have been destroyed.
 # be aware of this trickery...
 # I guess this is a memory-leak on my part, but I do absolutely not know where
@@ -109,7 +110,7 @@ Crypt::NSS::X509::_reinit();
 	is($thawte->verify_cert($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
 	is($thawte->verify_certificate($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
 	is($thawte->verify_certificate_pkix($vfytime, Crypt::NSS::X509::certUsageAnyCA), 1, 'verify ca');
-	
+
 	is($thawte->verify_pkix($vfytime), -8102, 'verify ca');
 	is($thawte->verify_cert($vfytime), -8102, 'verify ca');
 	is($thawte->verify_certificate($vfytime), -8102, 'verify ca');
@@ -129,7 +130,7 @@ Crypt::NSS::X509::_reinit();
 	is($google->verify_certificate($vfytime), 1, 'verify');
 	is($google->verify_certificate_pkix($vfytime), 1, 'verify');
 }
-	
+
 
 sub slurp {
   local $/=undef;

@@ -59,3 +59,4 @@ certUsageUserCertImport
 certUsageVerifyCA
 dbnickname
 db
+oids

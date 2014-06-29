@@ -6,28 +6,28 @@ use Alien::NSS;
 # 	'/usr/local',
 # 	'/usr',
 # 	'/opt',
-# 
+#
 # 	# the advantages of being the module author...
-# 	'/home/johanna/nss',	
+# 	'/home/johanna/nss',
 # );
-# 
+#
 # my @inc_paths;
 # my @lib_paths;
-# 
+#
 # for my $path ( @searchpaths ) {
 # 	push ( @inc_paths, "$path/include");
 # 	push ( @inc_paths, "$path/include/nspr");
 # 	push ( @inc_paths, "$path/include/nss");
-# 
+#
 # 	push ( @lib_paths, "$path/lib" );
 # 	push ( @lib_paths, "$path/lib/nspr" );
 # 	push ( @lib_paths, "$path/lib/nss" );
 # }
-# 
+#
 # unless ( search_header(@inc_paths) && search_lib(@lib_paths) ) {
 # 	# Trying
 # }
-# 
+#
 # my @l_lib_paths = map { "-L$_" } @lib_paths;
 
 name('Crypt-NSS-X509');
@@ -58,6 +58,7 @@ libs $ldflags;
 cc_optimize_flags('-O2 -g -Wall -std=c99');
 
 auto_install();
+sign;
 WriteAll();
 
 # sub search_header {
@@ -65,21 +66,21 @@ WriteAll();
 # 	for my $path (@_) {
 # 		return 1 if ( -f "$path/certt.h" );
 # 	}
-# 
+#
 # 	print "Could not find certt.h in include dirs.";
 # 	return 0;
 # }
-# 
+#
 # sub search_lib {
-# 	# and check for the library. a bit more complicated, 
+# 	# and check for the library. a bit more complicated,
 # 	# but well
-# 	
+#
 # 	for my $path (@_) {
 # 		my @nsslibs = <$path/libnss*>;
-# 
+#
 # 		return 1 if ( scalar @nsslibs > 0 );
 # 	}
-# 
+#
 # 	print "Could not find libnss* in lib dirs.";
 # 	return 0;
 # }
