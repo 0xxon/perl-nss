@@ -106,48 +106,63 @@ Returns the most specific common name specified in the certificate
 subject.
 
 =item country_name
+
 Returns the country name specified in the certificate subject.
 
 =item business_category
+
 Returns the business category of the certificate if present.
 
 =item ev_incorporation_country
+
 Returns the extended validation country if present.
 
 =item ev_incorporation_locality
+
 Returns the extended validation locality if present.
 
 =item ev_incorporation_state
+
 Returns the extended validation incorporation state if present.
 
 =item extension_oids
+
 Returns the oids of the present extension
 
 =item locality
+
 Locality given in certificate subject.
 
 =item locality_name
+
 Locality name given in certificate subject.
 
 =item org_name
+
 Organization name given in certificate subject.
 
 =item org_unit_name
+
 Organizational unit name given in certificate subject.
 
 =item policy
+
 Returns the certificate policy.
 
 =item postal_code
+
 Returns the postal code from the subject, if present.
 
 =item state_name
+
 Returns the name of the state from the subject if present.
 
 =item street_address
+
 Returns the street address from the subject is present.
 
 =item subject_serial
+
 Returns the serial from the subject. Note this does not necessarily have to be the same as the serial given outside the subject of the certificate.
 
 =item is_root
