@@ -8,7 +8,7 @@ use Carp;
 
 use MIME::Base64 ();
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub new_from_pem {
 	my $class = shift;

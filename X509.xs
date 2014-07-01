@@ -1252,7 +1252,7 @@ entries(crl)
 
         PR_ExplodeTime(time, PR_GMTParameters, &printableTime);
         timeString = PORT_Alloc(256);
-        if ( ! PR_FormatTime(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
+        if ( ! PR_FormatTimeUSEnglish(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
           croak("Could not format time string");
         }
 
@@ -1794,16 +1794,16 @@ subject(cert)
     if ( ix == 5 )
       rv = DER_UTCTimeToTime(&time, &cert->validity.notBefore);
     else if ( ix == 6 )
-  rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
+      rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
     else
-        croak("not possible");
+      croak("not possible");
 
     if (rv != SECSuccess)
       croak("Could not parse time");
 
     PR_ExplodeTime(time, PR_GMTParameters, &printableTime);
     timeString = PORT_Alloc(256);
-    if ( ! PR_FormatTime(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
+    if ( ! PR_FormatTimeUSEnglish(timeString, 256, "%a %b %d %H:%M:%S %Y", &printableTime) ) {
       croak("Could not format time string");
     }
 
