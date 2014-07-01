@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- **/ 
+ **/
 
 #include "EXTERN.h"
 #include "perl.h"
@@ -161,7 +161,7 @@ FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
                                    validTime, PR_TRUE);
     if (certList) {
         CERTCertListNode *node = CERT_LIST_HEAD(certList);
-    
+
         /* XXX and authoritykeyid in the future */
         while ( ! CERT_LIST_END(node, certList) ) {
             CERTCertificate *cert = node->cert;
@@ -170,11 +170,11 @@ FindCrlIssuer(CERTCertDBHandle *dbhandle, SECItem* subject,
                the first (newest) user cert */
             if (cert->trust &&
                 CERT_CheckCertUsage(cert, KU_CRL_SIGN) == SECSuccess) {
-                
+
                 issuerCert = CERT_DupCertificate(cert);
                 break;
             }
-            node = CERT_LIST_NEXT(node);   
+            node = CERT_LIST_NEXT(node);
         }
         CERT_DestroyCertList(certList);
     }
@@ -584,7 +584,7 @@ static void sv_encode(SV* in) {
 
     SPAGAIN;
 
-    if ( count != 1 ) 
+    if ( count != 1 )
       croak("Encode returned something... strange... count = %d", count);
 
     SV* out = POPs;
@@ -631,7 +631,7 @@ static PRInt64 cert_usage_to_certificate_usage(enum SECCertUsageEnum usage) {
       croak("Unknown certificate usage %d", usage);
   }
 }
-    
+
 static HV* node_to_hv(CERTVerifyLogNode* node) {
   HV* out = newHV();
 
@@ -652,7 +652,7 @@ static HV* node_to_hv(CERTVerifyLogNode* node) {
 static
 SV* item_to_hex(SECItem *data) {
   // do it like mozilla - if data <= 4 -> make integger
-  
+
   if ( data-> len <=4 ) {
     int i = DER_GetInteger(data);
     return newSViv(i);
@@ -660,18 +660,18 @@ SV* item_to_hex(SECItem *data) {
 
   // ok. That was easy. Now let's produce a hex-dump otherwise
 
-  SV* out = newSVpvn("",0); 
+  SV* out = newSVpvn("",0);
   for ( unsigned int i = 0; i < data->len; i++ ) {
     sv_catpvf(out, "%02x", data->data[i]);
   }
 
   return out;
 }
-  
-    
+
+
 static
 SV* item_to_hhex(SECItem *data) {
-  SV* out = newSVpvn("",0); 
+  SV* out = newSVpvn("",0);
   for ( unsigned int i = 0; i < data->len; i++ ) {
     sv_catpvf(out, "%02x", data->data[i]);
   }
@@ -752,7 +752,7 @@ universal_to_sv(SECItem* item) {
         val = item->data[0];
       }
 
-      if ( val ) 
+      if ( val )
         return &PL_sv_yes;
       else
         return &PL_sv_no;
@@ -787,7 +787,7 @@ universal_to_sv(SECItem* item) {
       break;
     case SEC_ASN1_UNIVERSAL_STRING:
       croak("Universal String not implemented");
-      break; 
+      break;
     default:
       return item_to_hhex(item);
       break;
@@ -867,7 +867,7 @@ BOOT:
     newCONSTSUB(stash, name, newSViv(Crypt__NSS__X509__const[i].s));
   }
 
-  
+
   PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
   //SECU_RegisterDynamicOids();
@@ -879,10 +879,10 @@ _init_nodb()
   PREINIT:
   SECStatus secStatus;
   //PRUint32 initFlags;
-  
+
   CODE:
   //initFlags = NSS_INIT_NOCERTDB | NSS_INIT_NOMODDB | NSS_INIT_NOROOTINIT;
-  
+
   //secStatus = NSS_Initialize("test2", "", "", SECMOD_DB, initFlags);
   secStatus = NSS_NoDB_Init(NULL);
   initstring = NULL;
@@ -894,7 +894,7 @@ _init_nodb()
 
   initialized = 1;
 
-  
+
 void
 _init_db(string)
   SV* string;
@@ -911,7 +911,7 @@ _init_db(string)
   initstring = (char*) malloc(pathlen+1);
   bzero(initstring, pathlen+1);
   memcpy(initstring, path, pathlen);
-  
+
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
@@ -923,12 +923,12 @@ _init_db(string)
   initialized = 1;
 
 
-void 
+void
 __cleanup(void)
-  
+
   PREINIT:
   SECStatus rv;
-  
+
   CODE:
 
   if ( !initialized ) {
@@ -944,7 +944,7 @@ __cleanup(void)
            err, PORT_ErrorToString(err));
   }
   //printf("Destroy was happy\n");
-  
+
 void
 __add_builtins(string)
   SV* string;
@@ -962,7 +962,7 @@ __add_builtins(string)
     PRErrorCode err = PR_GetError();
     croak( "could not add certificate to db %d = %s\n",
            err, PORT_ErrorToString(err));
-  } 
+  }
 
 SV*
 add_cert_to_db(cert, string)
@@ -989,18 +989,18 @@ add_cert_to_db(cert, string)
 
   if ( ix == 1 ) {
     // trusted Certificate
-  
+
     trust = (CERTCertTrust *)PORT_ZAlloc(sizeof(CERTCertTrust));
     if (!trust) {
       croak("Could not create trust");
     }
-  
+
     rv = CERT_DecodeTrustString(trust, "TCu,Cu,Tu"); // take THAT trust ;)
     if (rv) {
       croak("unable to decode trust string");
     }
   }
-  
+
   rv = PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, nick, PR_FALSE);
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
@@ -1015,13 +1015,13 @@ add_cert_to_db(cert, string)
     }
   }
 
-  PORT_Free(trust); 
+  PORT_Free(trust);
 
   PK11_FreeSlot(slot);
 
-  RETVAL = newSViv(1);   
+  RETVAL = newSViv(1);
 
-  OUTPUT: 
+  OUTPUT:
   RETVAL
 
 
@@ -1042,19 +1042,19 @@ _reinit()
 
 
   if ( initstring == NULL ) {
-    rv = NSS_NoDB_Init(NULL);   
+    rv = NSS_NoDB_Init(NULL);
   } else {
     //printf("%s\n\n", initstring);
     rv = NSS_InitReadWrite(initstring);
   }
-    
+
   if (rv != SECSuccess) {
     PRErrorCode err = PR_GetError();
-    croak("NSS Init failed: %d = %s\n",                  
+    croak("NSS Init failed: %d = %s\n",
     err, PORT_ErrorToString(err));
-  } 
-    
-  
+  }
+
+
 
 void
 dump_certificate_cache_info()
@@ -1079,7 +1079,7 @@ new_from_der(class, string)
   rv = sv_to_item(string, &item);
   if (rv != SECSuccess) {
     croak("sv_to_item failed");
-  }  
+  }
 
   //PRInt32 decodeOptions = CRL_DECODE_DEFAULT_OPTIONS;
 
@@ -1122,13 +1122,13 @@ version(crl)
   int version;
 
   CODE:
-  version = crl->crl.version.len ? DER_GetInteger(&crl->crl.version) : 0;  
+  version = crl->crl.version.len ? DER_GetInteger(&crl->crl.version) : 0;
   version++;
   RETVAL = newSViv(version);
 
   OUTPUT:
   RETVAL
-  
+
 
 void
 verify(crl, cert, timedouble = NO_INIT)
@@ -1148,7 +1148,7 @@ verify(crl, cert, timedouble = NO_INIT)
     // time contains seconds since epoch - netscape expects microseconds
     tmptime = tmptime * 1000000;
     LL_D2L(time, tmptime); // and convert to 64-bit int
-  }  
+  }
 
   rv = CERT_VerifySignedData(&crl->signatureWrap, cert, time, NULL);
 
@@ -1171,8 +1171,8 @@ find_issuer(crl, timedouble = NO_INIT)
   CERTCertDBHandle *defaultDB;
   SECItem* subject = NULL;
   CERTCertificate* cert;
-  SECStatus rv;  
-  
+  SECStatus rv;
+
   CODE:
   if ( items < 2 || SvIV(timedouble) == 0 ) {
     time = PR_Now();
@@ -1181,7 +1181,7 @@ find_issuer(crl, timedouble = NO_INIT)
     // time contains seconds since epoch - netscape expects microseconds
     tmptime = tmptime * 1000000;
     LL_D2L(time, tmptime); // and convert to 64-bit int
-  }  
+  }
 
   defaultDB = CERT_GetDefaultCertDB();
 
@@ -1201,22 +1201,22 @@ find_issuer(crl, timedouble = NO_INIT)
     }
 
     XSRETURN_YES;
-  }  
-    
+  }
+
 
   RETVAL = cert;
 
   OUTPUT:
   RETVAL
 
-void 
+void
 DESTROY(crl)
   Crypt::NSS::X509::CRL crl
 
   PPCODE:
 
   if ( crl ) {
-    SEC_DestroyCrl(crl); 
+    SEC_DestroyCrl(crl);
     crl = 0;
   }
 
@@ -1242,7 +1242,7 @@ entries(crl)
         int64 time;
         SECStatus rv;
         char *timeString;
-        PRExplodedTime printableTime; 
+        PRExplodedTime printableTime;
 	SV* timeSV;
 
 	rv = DER_UTCTimeToTime(&time, &(entry->revocationDate));
@@ -1330,14 +1330,14 @@ dump(certlist)
   }
 
 
-void 
+void
 DESTROY(certlist)
   Crypt::NSS::X509::CertList certlist;
 
   PPCODE:
 
   if ( certlist ) {
-    CERT_DestroyCertList(certlist); 
+    CERT_DestroyCertList(certlist);
     certlist = 0;
   }
 
@@ -1360,7 +1360,7 @@ curve(cert)
   // things to do. Totally easy. Everyone can do that. And find
   // out. Only took like 10 minutes.
   // Srsly.
-  
+
   SECItem oid = { siBuffer, NULL, 0};
 
   // this is the complicated part
@@ -1374,7 +1374,7 @@ curve(cert)
   oid.len = key->u.ec.DEREncodedParams.len - 2;
   oid.data = key->u.ec.DEREncodedParams.data + 2;
   if ((key->u.ec.DEREncodedParams.data[0] != SEC_ASN1_OBJECT_ID) ||
-        ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)) { 
+        ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)) {
     SECKEY_DestroyPublicKey(key);
     croak("Unknown EC-key");
   }
@@ -1382,10 +1382,10 @@ curve(cert)
   RETVAL = oid_to_sv(&oid);
 
   SECKEY_DestroyPublicKey(key);
-  
+
   OUTPUT:
   RETVAL
-    
+
 SV*
 raw_spki(cert)
   Crypt::NSS::X509::Certificate cert
@@ -1404,7 +1404,7 @@ raw_spki(cert)
 SV*
 bit_length(cert)
   Crypt::NSS::X509::Certificate cert
-  
+
   ALIAS:
   modulus = 1
   public_key = 1
@@ -1427,12 +1427,12 @@ bit_length(cert)
       } else if ( ix == 2 ) {
         RETVAL = item_to_hex(&key->u.rsa.publicExponent);
       } else {
-        SECKEY_DestroyPublicKey(key);        
+        SECKEY_DestroyPublicKey(key);
         croak("Internal error");
       }
 
       break;
-    } 
+    }
     case ecKey: {
       if ( ix == 0 ) {
         int len = SECKEY_ECParamsToKeySize(&key->u.ec.DEREncodedParams);
@@ -1440,7 +1440,7 @@ bit_length(cert)
       } else if ( ix == 1 ) {
         RETVAL = item_to_hex(&key->u.ec.publicValue);
       } else {
-        SECKEY_DestroyPublicKey(key);        
+        SECKEY_DestroyPublicKey(key);
         croak("EC certificates do not have exponent");
       }
 
@@ -1452,15 +1452,15 @@ bit_length(cert)
       } else if ( ix == 1 ) {
         RETVAL = item_to_hex(&key->u.dsa.publicValue);
       } else {
-        SECKEY_DestroyPublicKey(key);        
+        SECKEY_DestroyPublicKey(key);
         croak("DSA certificates do not have exponent");
       }
       break;
     }
     default:
       croak("Unknown key type %d", key->keyType);
-    }  
-   
+    }
+
     SECKEY_DestroyPublicKey(key);
   } else {
     XSRETURN_UNDEF;
@@ -1498,7 +1498,7 @@ fingerprint_md5(cert)
   } else {
     croak("Internal error - unknown function");
   }
-  
+
   if ( rv != SECSuccess ) {
     croak("Could not calculate fingerprint");
   }
@@ -1537,7 +1537,7 @@ extension_oids(cert)
 HV*
 policy(cert)
   Crypt::NSS::X509::Certificate cert
-  
+
   PREINIT:
     SECStatus rv;
     SECItem           cps;
@@ -1549,16 +1549,16 @@ policy(cert)
     rv = CERT_FindCertExtension(cert, SEC_OID_X509_CERTIFICATE_POLICIES, &cps);
     if (rv != SECSuccess) {
       XSRETURN_NO;
-    } 
+    }
 
     policies = CERT_DecodeCertificatePoliciesExtension(&cps);
-    if ( !policies ) 
+    if ( !policies )
       XSRETURN_NO;
 
     RETVAL = newHV();
     sv_2mortal((SV*)RETVAL);
 
-    policyInfos = policies->policyInfos; 
+    policyInfos = policies->policyInfos;
     while ( *policyInfos != NULL ) {
       policyInfo = *policyInfos++;
       switch (policyInfo->oid) {
@@ -1595,7 +1595,7 @@ policy(cert)
 	    default:{
 	    }
 	  }
-	}  
+	}
       }
     }
 
@@ -1604,7 +1604,7 @@ policy(cert)
 
 SV*
 subj_alt_name(cert)
-  Crypt::NSS::X509::Certificate cert 
+  Crypt::NSS::X509::Certificate cert
 
   PREINIT:
     SECStatus rv;
@@ -1615,17 +1615,17 @@ subj_alt_name(cert)
 
   CODE:
     SV* out = newSVpvn("", 0);
-    
+
     rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, &subAltName);
 
     if (rv != SECSuccess) {
       XSRETURN_NO;
-    } 
-    
+    }
+
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if ( !arena ) 
+    if ( !arena )
       croak("Could not create arena");
-   
+
     nameList = current = CERT_DecodeAltNameExtension(arena, &subAltName);
     if(!current)
       croak("No namelist");
@@ -1635,16 +1635,16 @@ subj_alt_name(cert)
   switch (current->type) {
   case certDNSName:
             {
-            if ( !first ) 
+            if ( !first )
 		sv_catpv(out, ",");
-	    else 
+	    else
 		first = false;
             sv_catpv(out, "DNS:");
       sv_catpvn(out, (const char*) current->name.other.data, current->name.other.len);
       break;
             }
   case certIPAddress:
-	    if ( !first ) 
+	    if ( !first )
             	sv_catpv(out, ",");
 	    else
 		first = false;
@@ -1658,7 +1658,7 @@ subj_alt_name(cert)
   }
   current = CERT_GetNextGeneralName(current);
     } while (current != nameList);
-    
+
     RETVAL = out;
 
     if (arena) {
@@ -1675,10 +1675,10 @@ subj_alt_name(cert)
 
 SV*
 subject(cert)
-  Crypt::NSS::X509::Certificate cert  
+  Crypt::NSS::X509::Certificate cert
 
   ALIAS:
-  issuer = 2  
+  issuer = 2
   serial = 3
   notBefore = 5
   notAfter = 6
@@ -1720,7 +1720,7 @@ subject(cert)
     RETVAL = item_to_sv(&cert->derCert);
   //} else if ( ix == 7 ) { Function is not provided in all nss versions :(
     // char * ce = CERT_GetCertificateEmailAddress(cert);
-    //if ( ce == NULL ) 
+    //if ( ce == NULL )
     //  XSRETURN_UNDEF;
     //RETVAL = newSVpvf("%s", ce);
     // PORT_Free(ce);
@@ -1753,7 +1753,7 @@ subject(cert)
 		croak("Internal error");
 	}
 	
-    if ( !cn ) 
+    if ( !cn )
       XSRETURN_UNDEF;
     SV* out = newSVpvf("%s", cn);
     PORT_Free(cn);
@@ -1789,11 +1789,11 @@ subject(cert)
     int64 time;
     SECStatus rv;
     char *timeString;
-    PRExplodedTime printableTime; 
+    PRExplodedTime printableTime;
 
-    if ( ix == 5 ) 
+    if ( ix == 5 )
       rv = DER_UTCTimeToTime(&time, &cert->validity.notBefore);
-    else if ( ix == 6 )    
+    else if ( ix == 6 )
   rv = DER_UTCTimeToTime(&time, &cert->validity.notAfter);
     else
         croak("not possible");
@@ -1852,9 +1852,9 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
     LL_D2L(time, tmptime); // and convert to 64-bit int
   }
 
-  if ( ix == 1 || ix == 4 ) 
+  if ( ix == 1 || ix == 4 )
     CERT_SetUsePKIXForValidation(PR_TRUE);
-  else 
+  else
     CERT_SetUsePKIXForValidation(PR_FALSE);
 
 
@@ -1864,21 +1864,21 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
 
   if ( ix == 2 ) {
     secStatus = CERT_VerifyCert(defaultDB, cert,
-               PR_TRUE, // check sig 
+               PR_TRUE, // check sig
                usage,
                time,
                NULL,
                NULL);
   } else if ( ix == 5) { // supplying log changes the return value
     secStatus = CERT_VerifyCert(defaultDB, cert,
-               PR_TRUE, // check sig 
+               PR_TRUE, // check sig
                usage,
                time,
                NULL,
                &log);
   } else {
     secStatus = CERT_VerifyCertificate(defaultDB, cert,
-               PR_TRUE, // check sig 
+               PR_TRUE, // check sig
                cert_usage_to_certificate_usage(usage),
                time,
                NULL,
@@ -1898,7 +1898,7 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
       ST(0) = newSViv(PR_GetError());
     } else {
       ST(0) = newSViv(1); // return 1 on success
-    }  
+    }
 
     sv_2mortal(ST(0));
     XSRETURN(1);
@@ -1909,11 +1909,11 @@ verify_certificate(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
       SV* rv = newRV_noinc((SV*) out);
       mXPUSHs(rv);
     }
-    
+
     PORT_FreeArena(log.arena, PR_FALSE);
 
   }
-  
+
 
 SV* match_name(cert, string)
   Crypt::NSS::X509::Certificate cert;
@@ -1968,11 +1968,11 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   cvin[inParamIndex].type = cert_pi_useAIACertFetch;
   cvin[inParamIndex].value.scalar.b = certFetching;
   inParamIndex++;
-  
+
   rev.leafTests.cert_rev_flags_per_method = revFlagsLeaf;
   rev.chainTests.cert_rev_flags_per_method = revFlagsChain;
   secStatus = configureRevocationParams(&rev);
- 
+
   if (secStatus) {
     croak("Can not configure revocation parameters");
   }
@@ -1995,11 +1995,11 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
     // we have a trustedCertList
     cvin[inParamIndex].type = cert_pi_trustAnchors;
     cvin[inParamIndex].value.pointer.chain = trustedCertList;
-    inParamIndex++;    
+    inParamIndex++;
   }
 
   cvin[inParamIndex].type = cert_pi_end;
-  
+
   // Initialize log
   log.arena = PORT_NewArena(512);
   log.head = log.tail = NULL;
@@ -2008,28 +2008,28 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
   /* cvout[0].type = cert_po_trustAnchor;
   cvout[0].value.pointer.cert = NULL;
   cvout[1].type = cert_po_certList;
-  cvout[1].value.pointer.chain = NULL; 
+  cvout[1].value.pointer.chain = NULL;
   cvout[2].type = cert_po_errorLog;
   cvout[2].value.pointer.log = &log; */
   cvout[0].type = cert_po_end;
 
   secStatus = CERT_PKIXVerifyCert(cert, cert_usage_to_certificate_usage(usage),
                                   cvin, cvout, NULL);
-  
+
 
   if (secStatus != SECSuccess ) {
     RETVAL = newSViv(PR_GetError()); // return error code
-  } else { 
+  } else {
     /* CERTCertificate* issuerCert = cvout[0].value.pointer.cert;
-    CERTCertList* builtChain = cvout[1].value.pointer.chain;    
+    CERTCertList* builtChain = cvout[1].value.pointer.chain;
 
     CERT_DestroyCertList(builtChain);
     CERT_DestroyCertificate(issuerCert); */
-   
+
     RETVAL = newSViv(1);
-  }  
-    
-  // destroy refs in the log 
+  }
+
+  // destroy refs in the log
   for (CERTVerifyLogNode *node = log.head; node; node = node->next) {
     if (node->cert)
       CERT_DestroyCertificate(node->cert);
@@ -2037,14 +2037,14 @@ verify_pkix(cert, timedouble = NO_INIT, usage = certUsageSSLServer, trustedCertL
 
   PORT_FreeArena(log.arena, PR_FALSE);
 
-  OUTPUT: 
+  OUTPUT:
   RETVAL
 
 
 Crypt::NSS::X509::CertList
-get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer) 
+get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
   Crypt::NSS::X509::Certificate cert;
-  I32 usage;  
+  I32 usage;
   SV* timedouble;
 
   PREINIT:
@@ -2060,7 +2060,7 @@ get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
     // time contains seconds since epoch - netscape expects microseconds
     tmptime = tmptime * 1000000;
     LL_D2L(time, tmptime); // and convert to 64-bit int
-  }  
+  }
 
   list = CERT_GetCertChainFromCert(cert, time, usage);
 
@@ -2070,7 +2070,7 @@ get_cert_chain_from_cert(cert, timedouble = NO_INIT, usage = certUsageSSLServer)
 
   RETVAL = list;
 
-  OUTPUT: 
+  OUTPUT:
   RETVAL
 
 Crypt::NSS::X509::Certificate
@@ -2088,7 +2088,7 @@ new(class, string, nickSv = NO_INIT)
 
   CODE:
  // Note: nick functionality seems to not really work in NSS
- 
+
   if ( items == 3 ) {
     nick = SvPV_nolen(nickSv);
   }
@@ -2099,9 +2099,9 @@ new(class, string, nickSv = NO_INIT)
     croak("sv_to_item failed");
   }
 
-  cert = CERT_NewTempCertificate(defaultDB, &item, 
-                                   nick     /* nickname */, 
-                                   PR_FALSE /* isPerm */, 
+  cert = CERT_NewTempCertificate(defaultDB, &item,
+                                   nick     /* nickname */,
+                                   PR_FALSE /* isPerm */,
            			   PR_TRUE  /* copyDER */);
 
   if (!cert) {
@@ -2126,12 +2126,12 @@ new_from_nick(class, string)
 
   CODE:
   nick = SvPV_nolen(string);
-  
+
   defaultDB = CERT_GetDefaultCertDB();
 
   RETVAL = CERT_FindCertByNickname(defaultDB, nick);
 
-  if ( RETVAL == NULL ) 
+  if ( RETVAL == NULL )
     XSRETURN_UNDEF;
 
 
