@@ -9,13 +9,13 @@ Crypt::NSS::X509 - Perl interface for the certificate handling parts of the NSS 
 
   use Crypt::NSS::X509;
 
-  my $cert = Crypt::X509::NSS::Certificate->new(slurp('derfile'));
+  my $cert = Crypt::NSS::X509::Certificate->new(slurp('derfile'));
 
   say $cert->subject();
   say $cert->issuer();
 
   my $valid = $cert->verify_cert();
-  
+
   if ( ! $cert->match_name('www.testdomain') ) {
     # Domain does not match certificate information
     exit(1);
