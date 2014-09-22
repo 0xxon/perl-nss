@@ -14,8 +14,8 @@ sub new_from_pem {
 	my $class = shift;
 	my $pem = shift;
 
-	$pem =~ s/-----BEGIN CERTIFICATE-----// or croak("Did not found certificate start");
-	$pem =~ s/-----END CERTIFICATE-----// or croak ("Did not found certificate end");
+	$pem =~ s/-----BEGIN CERTIFICATE-----// or croak("Did not find certificate start");
+	$pem =~ s/-----END CERTIFICATE-----// or croak ("Did not find certificate end");
 
 	my $der = MIME::Base64::decode($pem);
 	if ( length($der) < 1 ) {
