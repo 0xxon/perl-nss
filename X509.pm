@@ -63,26 +63,25 @@ sub load_rootlist {
 
 sub import {
 	my $pkg = shift; # us
-        my @syms = (); # symbols to import. really should be empty
-        my @dbpath = (); 
+	my @syms = (); # symbols to import. really should be empty
+	my @dbpath = ();
 	my $noinit = 0;
 
-        my $dest = \@syms;
+	my $dest = \@syms;
 
-        for (@_) {
-                if ( $_ eq ':dbpath') {
-                        # switch to dbpath 
-                        $dest = \@dbpath;
-                        next;           
-                } elsif ( $_ eq ':noinit' ) {
+	for (@_) {
+		if ( $_ eq ':dbpath') {
+			# switch to dbpath
+			$dest = \@dbpath;
+			next;
+		} elsif ( $_ eq ':noinit' ) {
 			$noinit = 1;
 			next;
 		}
+		push (@$dest, $_);
+	}
 
-                push (@$dest, $_);
-        }
-        
-        croak ("We do not export symbols") unless (scalar @syms == 0);	
+	croak ("We do not export symbols") unless (scalar @syms == 0);
 
 	return if ( $noinit );
 
