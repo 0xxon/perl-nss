@@ -889,7 +889,9 @@ _init_nodb()
   //SECMOD_AddNewModule("Builtins", DLL_PREFIX"nssckbi."DLL_SUFFIX, 0, 0);
 
   if (secStatus != SECSuccess) {
-    croak("NSS init");
+    PRErrorCode err = PR_GetError();
+    croak("NSS_NoDB_Init failed: %d = %s\n",
+                 err, PORT_ErrorToString(err));
   }
 
   initialized = 1;

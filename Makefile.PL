@@ -39,9 +39,9 @@ requires 'autodie' => 2.10;
 requires 'MIME::Base64' => 3.13;
 requires 'Exporter' => 5.60;
 requires 'Encode' => 2.40;
-requires 'Alien::NSS' => 0.05;
+requires 'Alien::NSS' => 0.22;
 test_requires 'Test::More' => 0.98;
-configure_requires 'Alien::NSS' => 0.05;
+configure_requires 'Alien::NSS' => 0.22;
 
 homepage 'https://github.com/0xxon/perl-nss';
 bugtracker 'https://github.com/0xxon/perl-nss/issues';
